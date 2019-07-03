@@ -35,11 +35,13 @@ getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary f
   phenotypedata <- as.data.frame(pData(phenoData(gsefile[[1]]))[,c("geo_accession","title")], stringsAsFactors = FALSE)
   rownames(phenotypedata) <- 1:nrow(phenotypedata)
   geostructure <- pData(phenoData(gsefile[[1]]))
+  cat("\n")
   print(phenotypedata)
   cat("\n")
   cat("Files acquired from GEO:\n")
   geoimporttable <- as.data.frame(rownames(geooutfiles), stringsAsFactors=FALSE)
   print(rownames(geooutfiles))
+  cat("\n")
   geoselected <- readline(prompt=("Select which GEO file to use for downstream processing: "))
     geoselectednumber <- match(geoselected, cbind(rownames(geoimporttable),geoimporttable)[,1])
     if(is.na(geoselectednumber) == TRUE){
@@ -82,7 +84,9 @@ getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary f
     if(any(findtxquant) == TRUE){
       cat("Series Matrix implies that this data might be transcript level quantifications:\n")
       print(unique(geostructure[findtxquant]))
+      cat("\n")
       cat("Validate the presence of transcript level quantifications in data files, then follow prompts.\n")
+      cat("\n")
       }
   }
 
@@ -102,7 +106,7 @@ txlevel <- TRUE
 library("tximport")
 NORM <- FALSE
 iscounts <- FALSE
-
+cat("\n")
 cat("To process transcript alignments we need either an existing \"tx2gene\" file or a Gencode GTF/GFF3.\n")
 tx2geneexists <- askYesNo("Do you have an existing tx2gene annotation file you wish to provide?")
 if(tx2geneexists == TRUE){
@@ -186,36 +190,44 @@ if (txtype==1){
   }
 files <- list.files(dir, recursive=TRUE, full.names = TRUE, pattern = ".sf|.sf.gz")
 names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir, recursive=TRUE, full.names = FALSE, pattern = ".sf|.sf.gz"))))
-txi.salmon <- tximport(files, type = "salmon", tx2gene = tx2gene, ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
-tximportcounts <- as.data.frame(txi.salmon$counts)
+  if(length(files) > 0){
+  txi.salmon <- tximport(files, type = "salmon", tx2gene = tx2gene, ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
+  tximportcounts <- as.data.frame(txi.salmon$counts)
+  } else if(length(files) == 0){txtype <- 6}
 } else if (txtype==2){
   if(getgeofiles == FALSE){
   dir <- readline(prompt=("Drop a directory containing Sailfish output into R Window or Enter Directory Path: "))
   }
 files <- list.files(dir, recursive=TRUE, full.names = TRUE, pattern = "quant.sf|quant.sf.gz")
 names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir, recursive=TRUE, full.names = FALSE, pattern = "quant.sf|quant.sf.gz"))))
-txi.sailfish <- tximport(files, type = "sailfish", tx2gene = tx2gene, ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
-tximportcounts <- as.data.frame(txi.sailfish$counts)
+  if(length(files) > 0){
+  txi.sailfish <- tximport(files, type = "sailfish", tx2gene = tx2gene, ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
+  tximportcounts <- as.data.frame(txi.sailfish$counts)
+  } else if(length(files) == 0){txtype <- 6}
 } else if (txtype==3){
 cat("Import Kallisto abundances from \"abundance.h5\" (requires rhdf5 library), or \"abundance.tsv*\".\n")
-kallistotype <- readline(prompt=("Select datatype by entering \"h5\" or \"tsv\" (without quotes): "))
+kallistotype <- readline(prompt=("Select kallisto datatype by entering \"h5\" or \"tsv\" (without quotes): "))
   if (kallistotype=="h5"){
   library("rhdf5")
     if(getgeofiles == FALSE){
     dir <- readline(prompt=("Drop a directory containing Kallisto output into R Window or Enter Directory Path: "))
     }
   files <- list.files(dir, recursive=TRUE, full.names = TRUE, pattern = "abundance.h5|abundance.h5.gz")
-  names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir, recursive=TRUE, full.names = FALSE, pattern = "abundance.h5|abundance.h5.gz"))))
-  txi.kallisto.h5 <- tximport(files, type = "kallisto", tx2gene = tx2gene, ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
-  tximportcounts <- as.data.frame(txi.kallisto.h5$abundance)}
+  if(length(files) > 0){
+    names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir, recursive=TRUE, full.names = FALSE, pattern = "abundance.h5|abundance.h5.gz"))))
+    txi.kallisto.h5 <- tximport(files, type = "kallisto", tx2gene = tx2gene, ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
+    tximportcounts <- as.data.frame(txi.kallisto.h5$abundance)
+    } else if(length(files) == 0){txtype <- 6}}
   if (kallistotype=="tsv"){
     if(getgeofiles == FALSE){
     dir <- readline(prompt=("Drop a directory containing Kallisto output into R Window or Enter Directory Path: "))
     }
   files <- list.files(dir, recursive=TRUE, full.names = TRUE, pattern = "abundance.tsv|abundance.tsv.gz")
-  names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir, recursive=TRUE, full.names = FALSE, pattern = "abundance.tsv|abundance.tsv.gz"))))
-  txi.kallisto.tsv <- tximport(files, type = "kallisto", tx2gene = tx2gene, ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
-  tximportcounts <- as.data.frame(txi.kallisto.tsv$abundance)}
+    if(length(files) > 0){
+    names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir, recursive=TRUE, full.names = FALSE, pattern = "abundance.tsv|abundance.tsv.gz"))))
+    txi.kallisto.tsv <- tximport(files, type = "kallisto", tx2gene = tx2gene, ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
+    tximportcounts <- as.data.frame(txi.kallisto.tsv$abundance)
+    } else if(length(files) == 0){txtype <- 6}}
 } else if (txtype==5){
   cat("Stringtie suppot not yet implemented\n")
 #  cat("We can import files produced by running the \"stringtie -eB -G transcripts.gff <source_file.bam>\" command per the TXImport tutorial.\n")
@@ -231,10 +243,12 @@ kallistotype <- readline(prompt=("Select datatype by entering \"h5\" or \"tsv\" 
 #  readline(prompt=("If this looks correct, press any key to continue..."))
 #  txi <- tximport(tmp, type = "stringtie", tx2gene = tx2gene)
   FAIL <- TRUE
-} else if (txtype==6){
-  cat("This method isn't really supported. I don't even know how you got here.\n")
-  cat(" We're going to have to make a lot of guesses to get through this.\n")
-  cat("Preprocessing outside of this script instead is recomended. Use at your own risk.\n")
+}
+if (txtype==6){
+  cat("Failover Mode. This method isn't really supported. Use at your own risk.\n")
+  cat("Could not detect transcript quantifications with tximport.\n")
+  cat(" We're going to have to make a lot of guesses here, but we'll get through this together.\n")
+  if(getgeofiles == FALSE){
   txmatrix <- readline(prompt=("Drop Transcript Expression Matrix into R Window or Enter File Path (supports csv or tab delimited txt): "))
   library("tools")
   txmatrixtype <- file_ext(gsub(".gz$", "", txmatrix))
@@ -252,8 +266,131 @@ kallistotype <- readline(prompt=("Select datatype by entering \"h5\" or \"tsv\" 
   print(head(full,3))
   cat("\n")
   cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
-  readline(prompt=("Press any key to continue..."))
-}}
+  readline(prompt=("Press any key to continue..."))}
+  if(getgeofiles == TRUE){
+        cat("Attempting to parse multiple individually quantified samples into single matrix...\n")
+        inputsamples <- list.files(outfile)
+        inputsamplestxt <- list.files(outfile, pattern=".txt|.tsv|.tabular|.tab")
+        txtsamplenumber <- length(inputsamplestxt)
+        inputsamplescsv <- list.files(outfile, pattern=".csv")
+        csvsamplenumber <- length(inputsamplescsv)
+        totalsamplenumber <- txtsamplenumber + csvsamplenumber
+        if(txtsamplenumber > 0){
+          print(inputsamplestxt)
+          cat(paste(txtsamplenumber),"tabular formatted samples were detected in input directory.\n")
+          txtsamplepaths <- file.path(outfile, inputsamplestxt)
+          names(txtsamplepaths) <- paste0(inputsamplestxt)
+          import_txt <- lapply(txtsamplepaths, read.table, header = TRUE, row.names=NULL, sep="\t", stringsAsFactors=FALSE)
+          for(i in 1:txtsamplenumber){
+            do
+            colnames(import_txt[[i]]) <- paste(inputsamplestxt[i], colnames(import_txt[[i]]), sep = "_")
+          }}
+        if(csvsamplenumber > 0){
+          print(inputsamplescsv)
+          cat(paste(csvsamplenumber),"csv formatted samples were detected in input directory.\n")
+          csvsamplepaths <- file.path(outfile, inputsamplescsv)
+          names(csvsamplepaths) <- paste0(inputsamplescsv)
+          import_csv <- lapply(csvsamplepaths, read.table, header = TRUE, row.names=NULL, sep=",", stringsAsFactors=FALSE)
+          for(i in 1:csvsamplenumber){
+            do
+            colnames(import_csv[[i]]) <- paste(inputsamplestxt[i], colnames(import_csv[[i]]), sep = "_")
+          }}
+        if((txtsamplenumber > 0) == (csvsamplenumber > 0)){
+          import.list <- append(import_txt, import_csv) #combine csv and txt imports
+          cat(paste(length(import.list)),"total samples were detected in input directory.\n")
+          } else if(csvsamplenumber == 0){
+            import.list <- import_txt  #process txt only
+            } else if(txtsamplenumber == 0){
+              import.list <- import_csv  #process csv only
+              }
+        cat("We need to make sure that all quantifications come from the same analysis pipeline.\n")
+        keep <- as.numeric(readline(prompt=("HOW MANY of the extracted quantifications do you want to keep for analysis? ")))
+        if(keep < length(names(import.list))){
+        list <- c(1:length(names(import.list)))
+        for(i in 1:keep){
+          do
+            cat("\n")
+            cat("Sample: ",paste0(names(import.list[i])),"\n")
+            value <- askYesNo("Include in analysis? ")
+            list[i] <- value}
+            import.list <- import.list[list]}
+
+        importdata <- as.data.frame(colnames(import.list[[1]]), stringsAsFactors=FALSE, header=TRUE)
+        colnames(importdata)[1] <- "EXPERIMENT"
+        cat("\n")
+        print(importdata)
+        cat("\n")
+        cat("Selected a sample to use for learning dataset format: \n")
+        expids <- readline(prompt=("Enter the name or row number from the EXPERIMENT column above that defines your transcript identifiers: "))
+        expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,1])
+          if(is.na(expidnumber) == TRUE){
+          expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,2])}
+        mergedexp <- Reduce(function(x, y) merge(x, y, all=FALSE, by= expidnumber , all.x=TRUE, all.y=TRUE), import.list,accumulate=F)
+        colnames(mergedexp)[expidnumber] <- "txID"
+
+        mergedexp %>% select_if(is.numeric) -> mergedexp_2
+        mergedexp_2 <- cbind(mergedexp[expidnumber], mergedexp_2)
+        mergedexp_2 <- mergedexp_2[, -grep("ength$", colnames(mergedexp_2))]
+        cat("Cleaned up identifiable extraneous non-numeric columns.\n")
+
+        fullimportdata <- as.data.frame(colnames(mergedexp_2), stringsAsFactors=FALSE, header=TRUE)
+        colnames(fullimportdata)[1] <- "EXPERIMENT"
+        print(fullimportdata)
+        cat("There are",paste(length(colnames(mergedexp_2))),"entries in the Experiment data matrix.\n")
+        keepcols <- readline(prompt=("How many are tx quantifications? (this should be one per sample): "))
+        removecols <- as.numeric(length(colnames(mergedexp_2))) - (1 + as.numeric(keepcols))
+        if(removecols > 0){
+          repeat{
+        importdataloop <- fullimportdata
+        colnames(importdataloop) <- c("EXPERIMENT")
+        fullloop <- mergedexp_2
+        print(importdataloop)
+          for (i in 1:(as.numeric(removecols))){
+            do
+              cat("Discard everything except your Transcript IDs and your per sample quantifications. \n")
+              expidsdrop <- readline(prompt=("Enter a name or row number from the EXPERIMENT column above that defines fields you want to DISCARD: "))
+                expiddropnumber <- match(expidsdrop, cbind(rownames(importdataloop),importdataloop)[,1])
+                if(is.na(expiddropnumber) == TRUE){expiddropnumber <- FALSE}
+                if(expiddropnumber == expidsdrop){
+                expidsdrop <- importdataloop[expiddropnumber,]}
+                if(length(expidsdrop) == "1"){
+                  cat("Dropping unused identifiers\n")
+                  cat("\n")
+                  fullloop <- fullloop[ , -which(names(fullloop) %in% c(expidsdrop))]
+                  importdataloop <- as.data.frame(colnames(fullloop), stringsAsFactors=FALSE, header=TRUE)
+                  colnames(importdataloop) <- c("EXPERIMENT")
+                  print(importdataloop)
+                  cat("\n")
+                  expidsdrop <- NULL}
+          }
+        check <- askYesNo("Does this display only a single transcript identifier and the sample ids?")
+        if(check == TRUE){
+        coldata <- importdataloop
+        tximportcounts <- fullloop
+        expids <- expidnumber
+        print(head(tximportcounts[expidnumber],3))
+        break
+        }}
+      } else if (removecols == 0){
+        coldata <- fullimportdata
+        tximportcounts <- mergedexp_2
+        expids <- expidnumber
+        print(head(tximportcounts[expidnumber],3))
+        }
+      txhasversions <- askYesNo("Do your TRANCRIPT IDs have decimal versions? (eg. ENST00000342771.9)? ")
+        if(txhasversions == TRUE){
+            tximportcounts[,1] <- gsub("\\..*","",tximportcounts[,1])
+            txhasversions <- FALSE}
+
+        cat("\n")
+        cat("Expression Matrix Imported\n")
+        cat("\n")
+        print(head(tximportcounts[expidnumber],3))
+        cat("\n")
+        cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
+        readline(prompt=("Press any key to continue..."))
+}
+  }}
 
 
 if (txtype==4){
@@ -328,7 +465,7 @@ FAIL <- TRUE
 if (FAIL == TRUE) {stop("An unsupported datatype was encountered and processing was terminated.")}
 
 #Import Gene Expression Matrix ##GEO conditional Needed for genematrix prompt
-if(txlevel == FALSE | getgeofiles == TRUE){
+if(txlevel == FALSE){
   if(getgeofiles == FALSE){
     genematrix <- readline(prompt=("Drop Gene Expression Matrix into R Window or Enter File Path (supports csv or tab delimited txt): "))
     }
@@ -390,9 +527,23 @@ if(txlevel == FALSE | getgeofiles == TRUE){
             } else if(txtsamplenumber == 0){
               import.list <- import_csv  #process csv only
               }
-
+        cat("We need to make sure that all quantifications come from the same analysis pipeline.\n")
+        keep <- as.numeric(readline(prompt=("HOW MANY of the extracted quantifications do you want to keep for analysis? ")))
+        if(keep < length(names(import.list))){
+        list <- c(1:length(names(import.list)))
+        for(i in 1:keep){
+          do
+            cat("\n")
+            cat("Sample: ",paste0(names(import.list[i])),"\n")
+            value <- askYesNo("Include in analysis? ")
+            list[i] <- value}
+            import.list <- import.list[list]
+          }
+        #importlist<-
+        #import.list <-
         importdata <- as.data.frame(colnames(import.list[[1]]), stringsAsFactors=FALSE, header=TRUE)
         colnames(importdata)[1] <- "EXPERIMENT"
+        cat("\n")
         print(importdata)
         cat("\n")
         cat("Selected a sample to use for learning dataset format: \n")
@@ -411,8 +562,9 @@ if(txlevel == FALSE | getgeofiles == TRUE){
         fullimportdata <- as.data.frame(colnames(mergedexp_2), stringsAsFactors=FALSE, header=TRUE)
         colnames(fullimportdata)[1] <- "EXPERIMENT"
         print(fullimportdata)
-        cat("There are",paste(length(colnames(mergedexp_2))),"columns in the Experiment data matrix.\n")
-        removecols <- readline(prompt=("How many columns are NOT Gene IDs or Gene Couts. (For example, gene lengths): "))
+        cat("There are",paste(length(colnames(mergedexp_2))),"entries in the Experiment data matrix.\n")
+        keepcols <- readline(prompt=("How many are gene quantifications? (this should be one per sample): "))
+        removecols <- as.numeric(length(colnames(mergedexp_2))) - (1 + as.numeric(keepcols))
         if(removecols > 0){
           repeat{
         importdataloop <- fullimportdata
@@ -421,6 +573,7 @@ if(txlevel == FALSE | getgeofiles == TRUE){
         print(importdataloop)
           for (i in 1:(as.numeric(removecols))){
             do
+              cat("Discard everything except your Gene IDs and your per sample quantifications. \n")
               expidsdrop <- readline(prompt=("Enter a name or row number from the EXPERIMENT column above that defines fields you want to DISCARD: "))
                 expiddropnumber <- match(expidsdrop, cbind(rownames(importdataloop),importdataloop)[,1])
                 if(is.na(expiddropnumber) == TRUE){expiddropnumber <- FALSE}
@@ -436,7 +589,7 @@ if(txlevel == FALSE | getgeofiles == TRUE){
                   cat("\n")
                   expidsdrop <- NULL}
           }
-        check <- askYesNo("Does this display only a single gene identifier and with the samples?")
+        check <- askYesNo("Does this display only a single gene identifier and the sample ids?")
         if(check == TRUE){
         coldata <- importdataloop
         full2 <- fullloop
@@ -463,16 +616,17 @@ if(txlevel == FALSE | getgeofiles == TRUE){
       }
 
 } else if(txlevel == TRUE){
-  full <- tximportcounts
-  cat("Using TXImport result...\n")
-  coldata <- as.data.frame(colnames(full), stringsAsFactors=FALSE, header=TRUE)
-  coldata <- rbind(c("geneID"), coldata)
-  colnames(coldata) <- c("EXPERIMENT")
-  expids <- 0
-  full2 <- full
-  cat("\n")
-  print(head(full2,3))
-  cat("\n")}
+    full <- tximportcounts
+    if(txtype != 6){
+    cat("Using TXImport result...\n")}
+    coldata <- as.data.frame(colnames(full), stringsAsFactors=FALSE, header=TRUE)
+    coldata <- rbind(c("geneID"), coldata)
+    colnames(coldata) <- c("EXPERIMENT")
+    expids <- 0
+    full2 <- full
+    cat("\n")
+    print(head(full2,3))
+    cat("\n")}
 
 if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)){
 cat("There are",paste(length(colnames(full))),"columns in your data table.\n")
@@ -549,7 +703,7 @@ for (i in 1:(as.numeric(geneids) - 1)){
 #
 #}
 }
-check <- askYesNo("Does this display only a single gene identifier and with the samples?")
+check <- askYesNo("Does this display only a single gene identifier and the sample ids?")
 if(check == TRUE){
 coldata <- coldataloop
 full2 <- fullloop
