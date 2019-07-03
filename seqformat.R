@@ -8,6 +8,7 @@ cat("\n")
 if(exists("altnorm") == FALSE){altnorm <- FALSE}
 ## before running script set altnorm <- "userlog" or "usevst" or "useall" to output additional normalize using deseq2's rlog or vst functions
 
+iscounts <- FALSE
 txlevel <- FALSE
 FAIL <- FALSE
 isnormalized <- FALSE
@@ -73,6 +74,7 @@ getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary f
       iscounts <- askYesNo("Do you agree that this is gene COUNTS data?")
           if(iscounts == TRUE){
           countsdetected <- TRUE
+          istx <- FALSE
             if(isnormalized == TRUE){
             TYPE <- "NORMCOUNTS"}
             if(isnormalized == FALSE){
@@ -90,7 +92,8 @@ getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary f
       }
   }
 
-istx <- askYesNo("Is your dataset transcript level abundance measurements from Salmon/Kallisto/Sailfish?")
+if(iscounts == FALSE){
+  istx <- askYesNo("Is your dataset transcript level abundance measurements from Salmon/Kallisto/Sailfish?")
   if(istx == FALSE){
   isrsem <- askYesNo("Is your dataset raw abundance measurements from RSEM?")
     if(isrsem == TRUE){
@@ -99,7 +102,7 @@ istx <- askYesNo("Is your dataset transcript level abundance measurements from S
     txlevel <- TRUE
     TYPE <- "RSEM"
     NORM <- FALSE
-    library("tximport")}}
+    library("tximport")}}}
 if(istx == TRUE){
 TYPE <- "TXABUNDANCE"
 txlevel <- TRUE
@@ -280,7 +283,7 @@ if (txtype==6){
           cat(paste(txtsamplenumber),"tabular formatted samples were detected in input directory.\n")
           txtsamplepaths <- file.path(outfile, inputsamplestxt)
           names(txtsamplepaths) <- paste0(inputsamplestxt)
-          import_txt <- lapply(txtsamplepaths, read.table, header = TRUE, row.names=NULL, sep="\t", stringsAsFactors=FALSE)
+          import_txt <- lapply(txtsamplepaths, read.table, header = FALSE, row.names=NULL, sep="\t", stringsAsFactors=FALSE)
           for(i in 1:txtsamplenumber){
             do
             colnames(import_txt[[i]]) <- paste(inputsamplestxt[i], colnames(import_txt[[i]]), sep = "_")
@@ -290,7 +293,7 @@ if (txtype==6){
           cat(paste(csvsamplenumber),"csv formatted samples were detected in input directory.\n")
           csvsamplepaths <- file.path(outfile, inputsamplescsv)
           names(csvsamplepaths) <- paste0(inputsamplescsv)
-          import_csv <- lapply(csvsamplepaths, read.table, header = TRUE, row.names=NULL, sep=",", stringsAsFactors=FALSE)
+          import_csv <- lapply(csvsamplepaths, read.table, header = FALSE, row.names=NULL, sep=",", stringsAsFactors=FALSE)
           for(i in 1:csvsamplenumber){
             do
             colnames(import_csv[[i]]) <- paste(inputsamplestxt[i], colnames(import_csv[[i]]), sep = "_")
@@ -303,39 +306,52 @@ if (txtype==6){
             } else if(txtsamplenumber == 0){
               import.list <- import_csv  #process csv only
               }
-        cat("We need to make sure that all quantifications come from the same analysis pipeline.\n")
-        keep <- as.numeric(readline(prompt=("HOW MANY of the extracted quantifications do you want to keep for analysis? ")))
-        if(keep < length(names(import.list))){
-        list <- c(1:length(names(import.list)))
-        for(i in 1:keep){
+
+        keep <- askYesNo("Are all of the quantifications from the same pipeline.? ")
+        if(keep == FALSE){
+        list <- list(NA)
+        for(i in 1:length(names(import.list))){
           do
             cat("\n")
             cat("Sample: ",paste0(names(import.list[i])),"\n")
             value <- askYesNo("Include in analysis? ")
-            list[i] <- value}
+            if(value == TRUE){
+            list[[1]][i] <- names(import.list[i])}}
+            list <- list[[1]][!is.na(list[[1]])]
             import.list <- import.list[list]}
 
-        importdata <- as.data.frame(colnames(import.list[[1]]), stringsAsFactors=FALSE, header=TRUE)
+        importdata <- as.data.frame(colnames(import.list[[1]]), stringsAsFactors = FALSE, header = FALSE)
         colnames(importdata)[1] <- "EXPERIMENT"
         cat("\n")
-        print(importdata)
+        displayexp <- merge( x = importdata, y = t(import.list[[1]][c(1:3,11:13),]), by.x = 1, by.y = 0)
+        print(displayexp)
         cat("\n")
         cat("Selected a sample to use for learning dataset format: \n")
+        cat("\n")
+        rebuildheader <- askYesNo("Is there a more descriptive headder than the one in the \"EXPERIMENT\" column? ")
+        if(rebuildheader == TRUE){
+        cat("\n")
+        cat(displayexp[2:4])
+        headnum <- as.numeric(readline(prompt=("Enter the COLUMN NUMBER above that you want to use as the descriptors: ")))
+        importlist2 <- lapply(import.list, function(x) {colnames(x) = x[headnum, ]
+        x = x[-headnum, ]})
+        import.list <- importlist2}
         expids <- readline(prompt=("Enter the name or row number from the EXPERIMENT column above that defines your transcript identifiers: "))
         expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,1])
           if(is.na(expidnumber) == TRUE){
           expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,2])}
         mergedexp <- Reduce(function(x, y) merge(x, y, all=FALSE, by= expidnumber , all.x=TRUE, all.y=TRUE), import.list,accumulate=F)
         colnames(mergedexp)[expidnumber] <- "txID"
-
-        mergedexp %>% select_if(is.numeric) -> mergedexp_2
-        mergedexp_2 <- cbind(mergedexp[expidnumber], mergedexp_2)
-        mergedexp_2 <- mergedexp_2[, -grep("ength$", colnames(mergedexp_2))]
-        cat("Cleaned up identifiable extraneous non-numeric columns.\n")
+        mergedexp_2 <- mergedexp #Disabled autocleanup - causes issues with too many formats.
+#        mergedexp %>% select_if(is.numeric) -> mergedexp_2
+#        mergedexp_2 <- cbind(mergedexp[expidnumber], mergedexp_2)
+#        mergedexp_2 <- mergedexp_2[, -grep("ength$", colnames(mergedexp_2))]
+#        cat("Cleaned up identifiable extraneous non-numeric columns.\n")
 
         fullimportdata <- as.data.frame(colnames(mergedexp_2), stringsAsFactors=FALSE, header=TRUE)
         colnames(fullimportdata)[1] <- "EXPERIMENT"
-        print(fullimportdata)
+        displayfullexp <- merge( x = fullimportdata, y = t(mergedexp_2[c(1:3,11:13),]), by.x = 1, by.y = 0)
+        print(displayfullexp)
         cat("There are",paste(length(colnames(mergedexp_2))),"entries in the Experiment data matrix.\n")
         keepcols <- readline(prompt=("How many are tx quantifications? (this should be one per sample): "))
         removecols <- as.numeric(length(colnames(mergedexp_2))) - (1 + as.numeric(keepcols))
@@ -442,7 +458,8 @@ if(USEDRSEMTXLEVEL == TRUE){colnames(tximportcounts)[1] <- "txID"
 }
 
 if(txlevel == FALSE){
-iscounts <- askYesNo("Is your dataset gene level COUNTS measurements from HTSeq-counts, FeatureCounts, or similar?")
+  if(iscounts != TRUE){
+  iscounts <- askYesNo("Is your dataset gene level COUNTS measurements from HTSeq-counts, FeatureCounts, or similar?")
   if(iscounts == TRUE){
   if(isnormalized == FALSE){
   isnormalized <- askYesNo("Are your counts already normalized?")
@@ -460,7 +477,7 @@ iscounts <- askYesNo("Is your dataset gene level COUNTS measurements from HTSeq-
 else if (iscounts == FALSE){
 cat("Your dataset is not supported at this time.\n")
 FAIL <- TRUE
-}}
+}}}
 
 if (FAIL == TRUE) {stop("An unsupported datatype was encountered and processing was terminated.")}
 
@@ -504,7 +521,7 @@ if(txlevel == FALSE){
           cat(paste(txtsamplenumber),"tabular formatted samples were detected in input directory.\n")
           txtsamplepaths <- file.path(genematrix, inputsamplestxt)
           names(txtsamplepaths) <- paste0(inputsamplestxt)
-          import_txt <- lapply(txtsamplepaths, read.table, header = TRUE, row.names=NULL, sep="\t", stringsAsFactors=FALSE)
+          import_txt <- lapply(txtsamplepaths, read.table, header = FALSE, row.names=NULL, sep="\t", stringsAsFactors=FALSE)
           for(i in 1:txtsamplenumber){
             do
             colnames(import_txt[[i]]) <- paste(inputsamplestxt[i], colnames(import_txt[[i]]), sep = "_")
@@ -514,7 +531,7 @@ if(txlevel == FALSE){
           cat(paste(csvsamplenumber),"csv formatted samples were detected in input directory.\n")
           csvsamplepaths <- file.path(genematrix, inputsamplescsv)
           names(csvsamplepaths) <- paste0(inputsamplescsv)
-          import_csv <- lapply(csvsamplepaths, read.table, header = TRUE, row.names=NULL, sep=",", stringsAsFactors=FALSE)
+          import_csv <- lapply(csvsamplepaths, read.table, header = FALSE, row.names=NULL, sep=",", stringsAsFactors=FALSE)
           for(i in 1:csvsamplenumber){
             do
             colnames(import_csv[[i]]) <- paste(inputsamplestxt[i], colnames(import_csv[[i]]), sep = "_")
@@ -527,41 +544,52 @@ if(txlevel == FALSE){
             } else if(txtsamplenumber == 0){
               import.list <- import_csv  #process csv only
               }
-        cat("We need to make sure that all quantifications come from the same analysis pipeline.\n")
-        keep <- as.numeric(readline(prompt=("HOW MANY of the extracted quantifications do you want to keep for analysis? ")))
-        if(keep < length(names(import.list))){
-        list <- c(1:length(names(import.list)))
-        for(i in 1:keep){
+
+        keep <- askYesNo("Are all of the quantifications from the same pipeline.? ")
+        if(keep == FALSE){
+        list <- list(NA)
+        for(i in 1:length(names(import.list))){
           do
             cat("\n")
             cat("Sample: ",paste0(names(import.list[i])),"\n")
             value <- askYesNo("Include in analysis? ")
-            list[i] <- value}
-            import.list <- import.list[list]
-          }
-        #importlist<-
-        #import.list <-
-        importdata <- as.data.frame(colnames(import.list[[1]]), stringsAsFactors=FALSE, header=TRUE)
+            if(value == TRUE){
+            list[[1]][i] <- names(import.list[i])}}
+            list <- list[[1]][!is.na(list[[1]])]
+            import.list <- import.list[list]}
+
+        importdata <- as.data.frame(colnames(import.list[[1]]), stringsAsFactors = FALSE, header = FALSE)
         colnames(importdata)[1] <- "EXPERIMENT"
         cat("\n")
-        print(importdata)
+        displayexp <- merge( x = importdata, y = t(import.list[[1]][c(1:3,11:13),]), by.x = 1, by.y = 0)
+        print(displayexp)
         cat("\n")
         cat("Selected a sample to use for learning dataset format: \n")
+        cat("\n")
+        rebuildheader <- askYesNo("Is there a more descriptive headder than the one in the \"EXPERIMENT\" column? ")
+        if(rebuildheader == TRUE){
+        cat("\n")
+        cat(displayexp[2:4])
+        headnum <- as.numeric(readline(prompt=("Enter the COLUMN NUMBER above that you want to use as the descriptors: ")))
+        importlist2 <- lapply(import.list, function(x) {colnames(x) = x[headnum, ]
+        x = x[-headnum, ]})
+        import.list <- importlist2}
         expids <- readline(prompt=("Enter the name or row number from the EXPERIMENT column above that defines your gene identifiers: "))
         expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,1])
           if(is.na(expidnumber) == TRUE){
           expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,2])}
-        mergedexp <- Reduce(function(x, y) merge(x, y, all=FALSE, by= expidnumber , all.x=TRUE, all.y=TRUE), import.list,accumulate=F)
+        mergedexp <- Reduce(function(x, y) merge(x, y, all=FALSE, by= expidnumber , all.x=TRUE, all.y=TRUE, header=F), import.list,accumulate=F)
         colnames(mergedexp)[expidnumber] <- "geneID"
-
-        mergedexp %>% select_if(is.numeric) -> mergedexp_2
-        mergedexp_2 <- cbind(mergedexp[expidnumber], mergedexp_2)
-        mergedexp_2 <- mergedexp_2[, -grep("ength$", colnames(mergedexp_2))]
-        cat("Cleaned up identifiable extraneous columns.\n")
+        mergedexp_2 <- mergedexp #Disabled autocleanup - causes issues with too many formats.
+#        mergedexp %>% select_if(is.numeric) -> mergedexp_2
+#        mergedexp_2 <- cbind(mergedexp[expidnumber], mergedexp_2)
+#        mergedexp_2 <- mergedexp_2[, -grep("ength$", colnames(mergedexp_2))]
+#        cat("Cleaned up identifiable extraneous columns.\n")
 
         fullimportdata <- as.data.frame(colnames(mergedexp_2), stringsAsFactors=FALSE, header=TRUE)
         colnames(fullimportdata)[1] <- "EXPERIMENT"
-        print(fullimportdata)
+        displayfullexp <- merge( x = fullimportdata, y = t(mergedexp_2[c(1:3,11:13),]), by.x = 1, by.y = 0)
+        print(displayfullexp)
         cat("There are",paste(length(colnames(mergedexp_2))),"entries in the Experiment data matrix.\n")
         keepcols <- readline(prompt=("How many are gene quantifications? (this should be one per sample): "))
         removecols <- as.numeric(length(colnames(mergedexp_2))) - (1 + as.numeric(keepcols))
@@ -594,14 +622,18 @@ if(txlevel == FALSE){
         coldata <- importdataloop
         full2 <- fullloop
         expids <- expidnumber
-        print(head(full2[expidnumber],3))
+        displayframe <- as.data.frame(full2[expidnumber][c(1:3,11:13),])
+        colnames(displayframe) <- c("geneID")
+        print(displayframe)
         break
         }}
       } else if (removecols == 0){
         coldata <- fullimportdata
         full2 <- mergedexp_2
         expids <- expidnumber
-        print(head(full2[expidnumber],3))
+        displayframe <- as.data.frame(full2[expidnumber][c(1:3,11:13),])
+        colnames(displayframe) <- c("geneID")
+        print(displayframe)
         }
       genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
         if(genehasversions == TRUE){
@@ -611,7 +643,9 @@ if(txlevel == FALSE){
         cat("\n")
         cat("Expression Matrix Imported\n")
         cat("\n")
-        print(head(full2[expidnumber],3))
+        displayframe <- as.data.frame(full2[expidnumber][c(1:3,11:13),])
+        colnames(displayframe) <- c("geneID")
+        print(displayframe)
         cat("\n")
       }
 
