@@ -42,8 +42,11 @@ getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary f
   cat("Files acquired from GEO:\n")
   geoimporttable <- as.data.frame(rownames(geooutfiles), stringsAsFactors=FALSE)
   print(rownames(geooutfiles))
+  print("All")
   cat("\n")
-  geoselected <- readline(prompt=("Select which GEO file to use for downstream processing: "))
+  useall <- askYesNo("Use all downloaded files? ([N] allows you to select specific files)")
+  if(useall == TRUE){genematrix <- paste0(getwd(),"/",geoid)}
+  if(useall == FALSE){geoselected <- readline(prompt=("Select which GEO file to use for downstream processing: "))
     geoselectednumber <- match(geoselected, cbind(rownames(geoimporttable),geoimporttable)[,1])
     if(is.na(geoselectednumber) == TRUE){
       geoselectednumber <- match(geoselected, cbind(rownames(geoimporttable),geoimporttable)[,2])
@@ -53,7 +56,7 @@ getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary f
     untar(rownames(geooutfiles)[geoselectednumber], exdir=paste0(dirname(rownames(geooutfiles)[geoselectednumber]),"/",basename(tools::file_path_sans_ext(rownames(geooutfiles)[geoselectednumber]))))
     outfile <- paste0(dirname(rownames(geooutfiles)[geoselectednumber]),"/",basename(tools::file_path_sans_ext(rownames(geooutfiles)[geoselectednumber])))
     }
-  genematrix <- outfile
+  genematrix <- outfile}
   cat("\n")
   cat("Experiment Imported.\n")
   cat("\n")
