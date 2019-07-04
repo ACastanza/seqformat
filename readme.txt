@@ -1,3 +1,5 @@
+The point of this script is that if you carefully follow the prompts using the information provided, you should be able to process any (bulk) RNA-seq dataset into normalized, properly formatted, data files ready to be used for GSEA (http://www.gsea-msigdb.org)
+
 Load the script with source("/seqformat.R") from your R session.
 
 This script requires at minimum, a GSEA compatible chip file to convert to gene symbols matching the correct ENSEMBL release.
