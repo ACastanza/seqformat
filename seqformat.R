@@ -334,7 +334,7 @@ if (txtype==6){
         rebuildheader <- askYesNo("Is there a more descriptive headder than the one in the \"EXPERIMENT\" column? ")
         if(rebuildheader == TRUE){
         cat("\n")
-        cat(displayexp[2:4])
+        print(displayexp[2:4])
         headnum <- as.numeric(readline(prompt=("Enter the COLUMN NUMBER above that you want to use as the descriptors: ")))
         importlist2 <- lapply(import.list, function(x) {colnames(x) = x[headnum, ]
         x = x[-headnum, ]})
@@ -572,7 +572,7 @@ if(txlevel == FALSE){
         rebuildheader <- askYesNo("Is there a more descriptive headder than the one in the \"EXPERIMENT\" column? ")
         if(rebuildheader == TRUE){
         cat("\n")
-        cat(displayexp[2:4])
+        print(displayexp[2:4])
         headnum <- as.numeric(readline(prompt=("Enter the COLUMN NUMBER above that you want to use as the descriptors: ")))
         importlist2 <- lapply(import.list, function(x) {colnames(x) = x[headnum, ]
         x = x[-headnum, ]})
@@ -686,7 +686,7 @@ expidnumber <- match(expids, cbind(rownames(coldata),coldata)[,1])
 # FIX ENSG_SYMBOL MERGE
   if (txlevel == FALSE){
   if(all((grepl("_", full[,expids], fixed=TRUE))) == TRUE){
-  library(tidyr)
+  library("tidyr")
   full <- separate(full, expids, c("geneID", NA), sep = "_", remove = TRUE, extra = "warn")
   expids <- "geneID"
   }}
@@ -882,7 +882,7 @@ if(donormalize == FALSE){
   write.table(bound, paste0(outprefix,"_Formatted.gct"), sep="\t", quote=F, row.names=FALSE, col.names=FALSE, na="")}
 if(donormalize == TRUE) {
   cat("Loading DESEq2 Library...\n")
-  library(DESeq2)
+  library("DESeq2")
   cat("Begin DESeq2 Normalization...\n")
   mappedexp_sum2 <- round(mappedexp_sum2)
   dds <- DESeqDataSetFromMatrix(countData = mappedexp_sum2,
