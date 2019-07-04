@@ -6,22 +6,22 @@ R Package Dependencies:
 
 From R base:
 
-tools
+tools (Required)
 
 From CRAN:
 
-dplyr
-tidyr
+dplyr (Required. Essential!)
+tidyr (required only if necessicary to split gene identifiers merged like ENSG000001_GeneSymbol, from a weird pipleine)
 readr (optional)
-tibble (there is a call to a tibble command, but I don’t declare the library, so it must be a requirement of something else)
+tibble (there is a call to a tibble command, but I don’t declare the library, so it must be a requirement loaded from something else)
 
  
 
 From Bioconductor:
 
-GEOquery
-DESeq2
-tximport
-GenomicFeatures
-rhdf5
+GEOquery (required only if you want to pull datasets directly from GEO)
+DESeq2 (required only for data that is not already normalized)
+tximport (required only for transcript level features)
+GenomicFeatures (required only if building tx2gene files from GTF/GFF3 for transcript data)
+rhdf5 (required only if parsing kallisto abundance.h5 files)
 
