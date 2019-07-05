@@ -758,7 +758,7 @@ coldata <- coldataloop
 full2 <- fullloop
 print(head(full2,3))
 if(TYPE == "NORMCOUNTS" | TYPE == "RAWCOUNTS" | TYPE == "TXABUNDANCE"){
-genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)?")
+genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
 } else if(TYPE == "RSEM"){genehasversions<- FALSE}
 if(genehasversions == TRUE){
 full2[,1] <- gsub("\\..*","",full2[,1])
@@ -775,22 +775,23 @@ buildchip <- askYesNo("Do you want to build the CHIP automatically? ")
 if(buildchip == TRUE){
   readline(prompt=("This requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press any key to continue..."))
   library("biomaRt")
-  cat("MsigDB7 uses ENSEMBL96 annotations from \"apr2019.archive.ensembl.org\"")
-    altversion <- askYesNo("Do you want to override this selection? ")
-    if(altversion == TRUE){
-      ensemblversion <- readline(prompt=("Enter the archive url for the ENSEMBL version you want to use: ")}
-    if(altversion == FALSE){
+  cat("MsigDB7 uses ENSEMBL96 annotations from \"apr2019.archive.ensembl.org\"\n")
+  altversion <- askYesNo("Do you want to override this selection? ")
+  if(altversion == TRUE){
+    ensemblversion <- readline(prompt=("Enter the archive url for the ENSEMBL version you want to use: "))
+    } else if(altversion == FALSE){
       ensemblversion <- "apr2019.archive.ensembl.org"
-      cat("Using ENSEMBL96 annotations matching MSigDB7...\n")}
+      cat("Using ENSEMBL96 annotations matching MSigDB7...\n")
+  }
   ensmart <- useMart(host = ensemblversion, biomart = 'ENSEMBL_MART_ENSEMBL', dataset = 'hsapiens_gene_ensembl')
   if(txtype == 6){
     cat("Building ENSEMBL Transcript -> Gene Symbol Mappings..\n")
     rawchip <- getBM( attributes = c("ensembl_transcript_id","external_gene_name","description"),mart = ensmart)
     colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
-  } else if(txtype != 6){
-    cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
-    gene <- getBM( attributes = c("ensembl_gene_id","external_gene_name","description"),mart = ensmart)
-    colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
+    } else if(txtype != 6){
+      cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
+      gene <- getBM( attributes = c("ensembl_gene_id","external_gene_name","description"),mart = ensmart)
+      colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
 }}
 if(buildchip == FALSE){
 CHIPpath <- readline(prompt=("Drop appropriate CHIP File matching the namespace of identifiers into R Window or Enter File Path: "))
