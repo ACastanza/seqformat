@@ -331,7 +331,7 @@ if (txtype==6){
         cat("\n")
         cat("Selected a sample to use for learning dataset format: \n")
         cat("\n")
-        rebuildheader <- askYesNo("Is there a more descriptive headder than the one in the \"EXPERIMENT\" column? ")
+        rebuildheader <- askYesNo("Is there a more descriptive header than the one in the \"EXPERIMENT\" column? ")
         if(rebuildheader == TRUE){
         cat("\n")
         print(displayexp[2:4])
@@ -343,9 +343,12 @@ if (txtype==6){
         expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,1])
           if(is.na(expidnumber) == TRUE){
           expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,2])}
-        mergedexp <- Reduce(function(x, y) merge(x, y, all=FALSE, by= expidnumber , all.x=TRUE, all.y=TRUE), import.list,accumulate=F)
+        mergedexp <- Reduce(function(x, y) merge(x, y, all=FALSE, by= expidnumber , all.x=TRUE, all.y=TRUE), import.list, accumulate=F)
         colnames(mergedexp)[expidnumber] <- "txID"
-        mergedexp_2 <- mergedexp #Disabled autocleanup - causes issues with too many formats.
+        mergedexp_2 <- mergedexp
+        colnames(mergedexp_2) <- make.unique(colnames(mergedexp_2))
+
+#        Disabled autocleanup - causes issues with too many formats.
 #        mergedexp %>% select_if(is.numeric) -> mergedexp_2
 #        mergedexp_2 <- cbind(mergedexp[expidnumber], mergedexp_2)
 #        mergedexp_2 <- mergedexp_2[, -grep("ength$", colnames(mergedexp_2))]
@@ -364,7 +367,7 @@ if (txtype==6){
         colnames(importdataloop) <- c("EXPERIMENT")
         fullloop <- mergedexp_2
         print(importdataloop)
-          for (i in 1:(as.numeric(removecols))){
+          for (i in 1:as.numeric(removecols)){
             do
               cat("Discard everything except your Transcript IDs and your per sample quantifications. \n")
               expidsdrop <- readline(prompt=("Enter a name or row number from the EXPERIMENT column above that defines fields you want to DISCARD: "))
@@ -569,7 +572,7 @@ if(txlevel == FALSE){
         cat("\n")
         cat("Selected a sample to use for learning dataset format: \n")
         cat("\n")
-        rebuildheader <- askYesNo("Is there a more descriptive headder than the one in the \"EXPERIMENT\" column? ")
+        rebuildheader <- askYesNo("Is there a more descriptive header than the one in the \"EXPERIMENT\" column? ")
         if(rebuildheader == TRUE){
         cat("\n")
         print(displayexp[2:4])
@@ -581,13 +584,16 @@ if(txlevel == FALSE){
         expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,1])
           if(is.na(expidnumber) == TRUE){
           expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,2])}
-        mergedexp <- Reduce(function(x, y) merge(x, y, all=FALSE, by= expidnumber , all.x=TRUE, all.y=TRUE, header=F), import.list,accumulate=F)
+        mergedexp <- Reduce(function(x, y) merge(x, y, all=FALSE, by= expidnumber , all.x=TRUE, all.y=TRUE), import.list, accumulate=F)
         colnames(mergedexp)[expidnumber] <- "geneID"
-        mergedexp_2 <- mergedexp #Disabled autocleanup - causes issues with too many formats.
+        mergedexp_2 <- mergedexp
+        colnames(mergedexp_2) <- make.unique(colnames(mergedexp_2))
+
+#        Disabled autocleanup - causes issues with too many formats.
 #        mergedexp %>% select_if(is.numeric) -> mergedexp_2
 #        mergedexp_2 <- cbind(mergedexp[expidnumber], mergedexp_2)
 #        mergedexp_2 <- mergedexp_2[, -grep("ength$", colnames(mergedexp_2))]
-#        cat("Cleaned up identifiable extraneous columns.\n")
+#        cat("Cleaned up identifiable extraneous non-numeric columns.\n")
 
         fullimportdata <- as.data.frame(colnames(mergedexp_2), stringsAsFactors=FALSE, header=TRUE)
         colnames(fullimportdata)[1] <- "EXPERIMENT"
@@ -602,7 +608,7 @@ if(txlevel == FALSE){
         colnames(importdataloop) <- c("EXPERIMENT")
         fullloop <- mergedexp_2
         print(importdataloop)
-          for (i in 1:(as.numeric(removecols))){
+          for (i in 1:as.numeric(removecols)){
             do
               cat("Discard everything except your Gene IDs and your per sample quantifications. \n")
               expidsdrop <- readline(prompt=("Enter a name or row number from the EXPERIMENT column above that defines fields you want to DISCARD: "))
@@ -686,7 +692,7 @@ expidnumber <- match(expids, cbind(rownames(coldata),coldata)[,1])
 # FIX ENSG_SYMBOL MERGE
   if (txlevel == FALSE){
   if(all((grepl("_", full[,expids], fixed=TRUE))) == TRUE){
-  library("tidyr")
+  library(tidyr)
   full <- separate(full, expids, c("geneID", NA), sep = "_", remove = TRUE, extra = "warn")
   expids <- "geneID"
   }}
@@ -882,7 +888,7 @@ if(donormalize == FALSE){
   write.table(bound, paste0(outprefix,"_Formatted.gct"), sep="\t", quote=F, row.names=FALSE, col.names=FALSE, na="")}
 if(donormalize == TRUE) {
   cat("Loading DESEq2 Library...\n")
-  library("DESeq2")
+  library(DESeq2)
   cat("Begin DESeq2 Normalization...\n")
   mappedexp_sum2 <- round(mappedexp_sum2)
   dds <- DESeqDataSetFromMatrix(countData = mappedexp_sum2,
