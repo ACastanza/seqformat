@@ -27,6 +27,7 @@ cat("\n")
 
 getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary files\"?")
   if(getgeofiles == TRUE){
+  readline(prompt=("This step requires the Bioconductor package \"GEOquery\". Make sure it is installed, then press any key to continue..."))
   library("GEOquery")
   library("tools")
   geoid <- readline(prompt=("Enter the GEOID for the datafiles (eg: GSE38786): "))
@@ -105,10 +106,12 @@ if(iscounts == FALSE){
     txlevel <- TRUE
     TYPE <- "RSEM"
     NORM <- FALSE
+    readline(prompt=("This step requires the Bioconductor package \"tximport\". Make sure it is installed, then press any key to continue..."))
     library("tximport")}}}
 if(istx == TRUE){
 TYPE <- "TXABUNDANCE"
 txlevel <- TRUE
+readline(prompt=("This step requires the Bioconductor package \"tximport\". Make sure it is installed, then press any key to continue..."))
 library("tximport")
 NORM <- FALSE
 iscounts <- FALSE
@@ -156,6 +159,7 @@ cat("This requires the GenomicFeatures Package from Bioconductor to be available
 tx2genebuild <- askYesNo("(This has only been tested for Gencode Transcriptomes) Continue?")
 }
   if(tx2genebuild == TRUE){
+  readline(prompt=("This step requires the Bioconductor package \"GEOquery\". Make sure it is installed, then press any key to continue..."))
   library("GenomicFeatures")
   txgft <- readline(prompt=("Drop Your GTF/GFF3 file into R Window or Enter full path to file: "))
   TxDb <- makeTxDbFromGFF(file = txgft)
@@ -214,6 +218,7 @@ names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.
 cat("Import Kallisto abundances from \"abundance.h5\" (requires rhdf5 library), or \"abundance.tsv*\".\n")
 kallistotype <- readline(prompt=("Select kallisto datatype by entering \"h5\" or \"tsv\" (without quotes): "))
   if (kallistotype=="h5"){
+  readline(prompt=("This step requires the Bioconductor package \"rhdf5\". Make sure it is installed, then press any key to continue..."))
   library("rhdf5")
     if(getgeofiles == FALSE){
     dir <- readline(prompt=("Drop a directory containing Kallisto output into R Window or Enter Directory Path: "))
@@ -310,7 +315,7 @@ if (txtype==6){
               import.list <- import_csv  #process csv only
               }
 
-        keep <- askYesNo("Are all of the quantifications from the same pipeline.? ")
+        keep <- askYesNo("Are all of the quantifications from the same pipeline? ")
         if(keep == FALSE){
         list <- list(NA)
         for(i in 1:length(names(import.list))){
@@ -551,7 +556,7 @@ if(txlevel == FALSE){
               import.list <- import_csv  #process csv only
               }
 
-        keep <- askYesNo("Are all of the quantifications from the same pipeline.? ")
+        keep <- askYesNo("Are all of the quantifications from the same pipeline? ")
         if(keep == FALSE){
         list <- list(NA)
         for(i in 1:length(names(import.list))){
@@ -692,7 +697,8 @@ expidnumber <- match(expids, cbind(rownames(coldata),coldata)[,1])
 # FIX ENSG_SYMBOL MERGE
   if (txlevel == FALSE){
   if(all((grepl("_", full[,expids], fixed=TRUE))) == TRUE){
-  library(tidyr)
+  readline(prompt=("This step requires the CRAN package \"tidyr\". Make sure it is installed, then press any key to continue..."))
+  library("tidyr")
   full <- separate(full, expids, c("geneID", NA), sep = "_", remove = TRUE, extra = "warn")
   expids <- "geneID"
   }}
@@ -763,8 +769,32 @@ break
 }
 
 #Import CHIP File for Processing
+cat("We now need to convert your gene identifiers into the MSigDB namespace using GSEA CHIP files.\n")
+cat("If your experiment uses >> HUMAN ENSEMBL IDs << we can do this automatically\n")
+buildchip <- askYesNo("Do you want to build the CHIP automatically? ")
+if(buildchip == TRUE){
+  readline(prompt=("This requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press any key to continue..."))
+  library("biomaRt")
+  cat("MsigDB7 uses ENSEMBL96 annotations from \"apr2019.archive.ensembl.org\"")
+    altversion <- askYesNo("Do you want to override this selection? ")
+    if(altversion == TRUE){
+      ensemblversion <- readline(prompt=("Enter the archive url for the ENSEMBL version you want to use: ")}
+    if(altversion == FALSE){
+      ensemblversion <- "apr2019.archive.ensembl.org"
+      cat("Using ENSEMBL96 annotations matching MSigDB7...\n")}
+  ensmart <- useMart(host = ensemblversion, biomart = 'ENSEMBL_MART_ENSEMBL', dataset = 'hsapiens_gene_ensembl')
+  if(txtype == 6){
+    cat("Building ENSEMBL Transcript -> Gene Symbol Mappings..\n")
+    rawchip <- getBM( attributes = c("ensembl_transcript_id","external_gene_name","description"),mart = ensmart)
+    colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
+  } else if(txtype != 6){
+    cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
+    gene <- getBM( attributes = c("ensembl_gene_id","external_gene_name","description"),mart = ensmart)
+    colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
+}}
+if(buildchip == FALSE){
 CHIPpath <- readline(prompt=("Drop appropriate CHIP File matching the namespace of identifiers into R Window or Enter File Path: "))
-rawchip <- read.table(CHIPpath, sep="\t", comment.char = "", quote="", stringsAsFactors=FALSE, fill = TRUE, header=T)
+rawchip <- read.table(CHIPpath, sep="\t", comment.char = "", quote="", stringsAsFactors=FALSE, fill = TRUE, header=T)}
 chip <- rawchip[c("Probe.Set.ID","Gene.Symbol")]
 colnames(chip) <- c("Raw_IDs", "NAME")
 fullchip <- unique(rawchip[c("Gene.Symbol","Gene.Title")])
@@ -887,8 +917,9 @@ if(donormalize == FALSE){
   cat("Writing final .GCT file for GSEA\n")
   write.table(bound, paste0(outprefix,"_Formatted.gct"), sep="\t", quote=F, row.names=FALSE, col.names=FALSE, na="")}
 if(donormalize == TRUE) {
-  cat("Loading DESEq2 Library...\n")
-  library(DESeq2)
+  readline(prompt=("This step requires the Bioconductor package \"DESeq2\". Make sure it is installed, then press any key to continue..."))
+  cat("Loading DESeq2 Library...\n")
+  library("DESeq2")
   cat("Begin DESeq2 Normalization...\n")
   mappedexp_sum2 <- round(mappedexp_sum2)
   dds <- DESeqDataSetFromMatrix(countData = mappedexp_sum2,
