@@ -26,4 +26,4 @@ DESeq2 (required only for data that is not already normalized)
 tximport (required only for transcript level features)
 GenomicFeatures (required only if building tx2gene files from GTF/GFF3 for transcript data)
 rhdf5 (required only if parsing kallisto abundance.h5 files)
-
+biomaRt (required only if building CHIP file from Biomart rather than supplying one).
