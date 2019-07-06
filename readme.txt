@@ -4,6 +4,8 @@ Load the script with source("/seqformat.R") from your R session.
 
 This script requires at minimum, a GSEA compatible chip file to convert to gene symbols matching the correct ENSEMBL release.
 
+Warning: Do not use this script to perform orthology conversions if your dataset requires normalization. It will not produce a statistically valid result (yet)/
+
 R Package Dependencies:
 
 From R base:
@@ -17,7 +19,7 @@ tidyr (required only if necessicary to split gene identifiers merged like ENSG00
 readr (optional)
 tibble (there is a call to a tibble command, but I don’t declare the library, so it must be a requirement loaded from something else)
 
- 
+
 
 From Bioconductor:
 
