@@ -299,13 +299,24 @@ if (txtype == 6){
       if(colnames(full)[1] == "X"){colnames(full)[1] <- colnames(full["ID"])}
       if(colnames(full)[1] == "row.names"){colnames(full)[1] <- "ID"}}
     #if(){} #Add folder parser  HERE
+  importdata <- as.data.frame(colnames(full), stringsAsFactors = FALSE, header = FALSE)
+  colnames(full)[1] <- "EXPERIMENT"
+  cat("\n")
+  displayexp <- merge( x = importdata, y = t(full[c(1:3,11:13),]), by.x = 1, by.y = 0)
+  print(displayexp)
+  expids <- readline(prompt=("Enter the name or row number from the EXPERIMENT column above that defines your transcript identifiers: "))
+  expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,1])
+  if(is.na(expidnumber) == TRUE){
+    expidnumber <- match(expids, cbind(rownames(importdata),importdata)[,2])}
+  colnames(mergedexp)[expidnumber] <- "txID"
+
   cat("Transcript expression Matrix Imported\n")
   #txlevel <- FALSE
   cat("\n")
   print(head(full,3))
   cat("\n")
-  cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
-  readline(prompt=("Press any key to continue..."))}
+#  cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
+#  readline(prompt=("Press any key to continue..."))}
   if(getgeofiles == TRUE){
         cat("Attempting to parse multiple individually quantified samples into single matrix...\n")
         inputsamples <- list.files(outfile)
@@ -368,7 +379,7 @@ if (txtype == 6){
         if(rebuildheader == TRUE){
         cat("\n")
         print(displayexp[2:4])
-        headnum <- as.numeric(readline(prompt=("Enter the COLUMN NUMBER above that you want to use as the descriptors: ")))
+        headnum <- as.numeric(readline(prompt=("Enter the COLUMN NUMBER above that you want to use as the labels: ")))
         importlist2 <- lapply(import.list, function(x) {colnames(x) = x[headnum, ]
         x = x[-headnum, ]})
         import.list <- importlist2}
@@ -421,31 +432,39 @@ if (txtype == 6){
         check <- askYesNo("Does this display only a single transcript identifier and the sample ids?")
         if(check == TRUE){
         coldata <- importdataloop
-        tximportcounts <- fullloop
+        full <- fullloop
         expids <- expidnumber
         print(head(tximportcounts[expidnumber],3))
         break
         }}
       } else if (removecols == 0){
         coldata <- fullimportdata
-        tximportcounts <- mergedexp_2
+        full <- mergedexp_2
         expids <- expidnumber
-        print(head(tximportcounts[expidnumber],3))
+        print(head(full[expidnumber],3))
         }
       txhasversions <- askYesNo("Do your TRANCRIPT IDs have decimal versions? (eg. ENST00000342771.9)? ")
         if(txhasversions == TRUE){
-            tximportcounts[,1] <- gsub("\\..*","",tximportcounts[,1])
+            full[,1] <- gsub("\\..*","",full[,1])
             txhasversions <- FALSE}
 
         cat("\n")
         cat("Expression Matrix Imported\n")
         cat("\n")
-        print(head(tximportcounts[expidnumber],3))
+        print(head(full[expidnumber],3))
         cat("\n")
-        cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
-        readline(prompt=("Press any key to continue...")) #Implement merge with tx2gene.
+#        cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
+#        readline(prompt=("Press any key to continue...")) #Implement merge with tx2gene.
 }
 #Add tx2gene mapper HERE
+full <- merge(x = tx2gene, y = full, by.x = "TXNAME" , by.y = "txID")
+#drop transcript column
+full <- distinct(full)
+full %>%
+  group_by(GENEID) %>%
+  summarise_all(sum) %>%
+  data.frame() -> full
+
   }}
 
 
@@ -883,7 +902,7 @@ if(donormalize == TRUE) {
 
 #SUM Counts for Identifiers Mapping to the Same Gene
 full2 <- distinct(full2)
-mappedexp %>%
+full2 %>%
   group_by(expids) %>%
   summarise_all(sum) %>%
   data.frame() -> full2_sum
