@@ -775,15 +775,15 @@ buildchip <- askYesNo("Do you want to build the CHIP automatically? ")
 if(buildchip == TRUE){
   readline(prompt=("This requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press any key to continue..."))
   library("biomaRt")
-  cat("MsigDB7 uses ENSEMBL96 annotations from \"apr2019.archive.ensembl.org\"\n")
+  cat("MsigDB7 uses ENSEMBL96 annotations from Ensembl 96\n")
   altversion <- askYesNo("Do you want to override this selection? ")
   if(altversion == TRUE){
-    ensemblversion <- readline(prompt=("Enter the archive url for the ENSEMBL version you want to use: "))
+    ensemblversion <- readline(prompt=("Enter the ENSEMBL version (eg. 96) you want to use (number only): "))
     } else if(altversion == FALSE){
-      ensemblversion <- "apr2019.archive.ensembl.org"
+      ensemblversion <- "96"
       cat("Using ENSEMBL96 annotations matching MSigDB7...\n")
   }
-  ensmart <- useMart(host = ensemblversion, biomart = 'ENSEMBL_MART_ENSEMBL', dataset = 'hsapiens_gene_ensembl')
+  ensmart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", version = ensemblversion)
   if(txtype == 6){
     cat("Building ENSEMBL Transcript -> Gene Symbol Mappings..\n")
     rawchip <- getBM( attributes = c("ensembl_transcript_id","external_gene_name","description"),mart = ensmart)
