@@ -1,3 +1,5 @@
+#v1.4 Development copy. Restructure for TXlevel data and not-human experiments
+
 cat("We're going to interactively process your RNA-seq data to output GSEA Compatible files.\n")
 cat("Lets get started\n")
 cat("Loading dplyr library for data formatting\n")
@@ -415,7 +417,7 @@ if (txtype==6){
         print(head(tximportcounts[expidnumber],3))
         cat("\n")
         cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
-        readline(prompt=("Press any key to continue..."))
+        readline(prompt=("Press any key to continue...")) #Implement merge with tx2gene.
 }
   }}
 
@@ -768,42 +770,6 @@ break
 }
 }
 
-#Import CHIP File for Processing
-cat("We now need to convert your gene identifiers into the MSigDB namespace using GSEA CHIP files.\n")
-cat("If your experiment uses >> HUMAN ENSEMBL IDs << we can do this automatically\n")
-buildchip <- askYesNo("Do you want to build the CHIP automatically? ")
-if(buildchip == TRUE){
-  readline(prompt=("This requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press any key to continue..."))
-  library("biomaRt")
-  cat("MsigDB7 uses ENSEMBL96 annotations from Ensembl 96\n")
-  altversion <- askYesNo("Do you want to override this selection? ")
-  if(altversion == TRUE){
-    ensemblversion <- readline(prompt=("Enter the ENSEMBL version (eg. 96) you want to use (number only): "))
-    } else if(altversion == FALSE){
-      ensemblversion <- "96"
-      cat("Using ENSEMBL96 annotations matching MSigDB7...\n")
-  }
-  ensmart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", version = ensemblversion)
-  if(txtype == 6){
-    cat("Building ENSEMBL Transcript -> Gene Symbol Mappings..\n")
-    rawchip <- getBM( attributes = c("ensembl_transcript_id","external_gene_name","description"),mart = ensmart)
-    colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
-    } else if(txtype != 6){
-      cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
-      gene <- getBM( attributes = c("ensembl_gene_id","external_gene_name","description"),mart = ensmart)
-      colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
-}}
-if(buildchip == FALSE){
-CHIPpath <- readline(prompt=("Drop appropriate CHIP File matching the namespace of identifiers into R Window or Enter File Path: "))
-rawchip <- read.table(CHIPpath, sep="\t", comment.char = "", quote="", stringsAsFactors=FALSE, fill = TRUE, header=T)}
-chip <- rawchip[c("Probe.Set.ID","Gene.Symbol")]
-colnames(chip) <- c("Raw_IDs", "NAME")
-fullchip <- unique(rawchip[c("Gene.Symbol","Gene.Title")])
-colnames(fullchip) <- c("NAME", "Description")
-
-cat("Done\n")
-cat("\n")
-
 if(median(nchar(colnames(full2))) > 25){
 cat("Your sample names are pretty long.\n")
 replacenames <- askYesNo("Would you like to replace them with something friendlier?")
@@ -825,7 +791,7 @@ replacenames <- askYesNo("Would you like to replace them with something friendli
 
 #Prompt User for DESeq2 formatted "coldata" Experiment Design File
 cat("We can build the GSEA CLS file from a DESeq2 \"coldata\" file.\n")
-colavailable <- askYesNo("Do you have an existing coldata file?")
+colavailable <- askYesNo("Do you have an existing coldata file (if not, we can build one)? ")
 if(colavailable == TRUE){
 design <- readline(prompt=("Drop DESeq2 formatted coldata File into R Window or Enter File Path, see DESeq2 Tutorial for Formatting (https://bioconductor.org/packages/3.8/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#input-data): "))
 coldata <- read.table(design, sep="\t", header=T, row.names =1)
@@ -877,6 +843,102 @@ coldata <- coldata[c(2)]
 break
 }}}
 
+if(NORM == FALSE){
+cat("Your dataset is flagged as needing normalization to be compatible with GSEA.\n")
+donormalize <- askYesNo("We can now normalize your dataset with DESEq2. Continue?")
+if(donormalize == FALSE){
+  cat("Perofrming standard filtering of low count genes without additional normalization.\n")
+  cat("You probably don't want to do this. We don't think this dataset is properly normalized.\n")
+  NORM <- TRUE}
+if(donormalize == TRUE) {
+
+#SUM Counts for Identifiers Mapping to the Same Gene
+full2 <- distinct(full2)
+mappedexp %>%
+  group_by(expids) %>%
+  summarise_all(sum) %>%
+  data.frame() -> full2_sum
+
+#Set Gene Names as Index Column
+full2_sum2 <- full2_sum[,-1]
+rownames(full2_sum2) <- full2_sum[,1]
+rownames(coldata) <- colnames(full2_sum2)
+full3 <- full2_sum2
+cat("Done\n")
+outprefix <- readline(prompt=("Enter a prefix to label output files: "))
+cat("\n")
+
+  readline(prompt=("This step requires the Bioconductor package \"DESeq2\". Make sure it is installed, then press any key to continue..."))
+  cat("Loading DESeq2 Library...\n")
+  library("DESeq2")
+  cat("Begin DESeq2 Normalization...\n")
+  full3 <- round(full3)
+  dds <- DESeqDataSetFromMatrix(countData = full3,
+                                colData = coldata,
+                                design = ~ condition)
+  keep <- rowSums(counts(dds)) >= 10
+  dds <- dds[keep,]
+  dds <- DESeq(dds)
+  res <- results(dds)
+  DESEQ2DONE <- TRUE
+}}
+
+##Move Normalization functions to before chip processing, but leave merge with chip after. Needs Conditional merge with chip function.
+if(DESEQ2DONE == TRUE){
+cat("Normalizing by size factors (default)\n")
+dds <- estimateSizeFactors(dds)
+norm <- counts(dds, normalized=TRUE)
+norm <- tibble::rownames_to_column(as.data.frame(norm), "NAME")}
+
+if(altnorm == "usevst" | altnorm == "useall"){
+cat("Normalizing using the DESeq2 variance stabilizing transformation\n")
+vsd <- vst(dds, blind=FALSE)
+vstnorm <- as.data.frame(assay(vsd))
+vstnorm <- tibble::rownames_to_column(as.data.frame(vstnorm), "NAME")}
+
+if(altnorm == "userlog" | altnorm == "useall"){
+cat("Normalizing using the DESeq2 rlog transformation\n")
+rld <- rlog(dds, blind=FALSE)
+rlognorm <- as.data.frame(assay(rld))
+rlognorm <- tibble::rownames_to_column(as.data.frame(rlognorm), "NAME")}
+
+#Import CHIP File for Processing
+cat("We now need to convert your gene identifiers into the MSigDB namespace using GSEA CHIP files.\n")
+cat("If your experiment uses >> HUMAN ENSEMBL IDs << we can do this automatically\n")
+buildchip <- askYesNo("Do you want to build the CHIP automatically? ")
+if(buildchip == TRUE){
+  readline(prompt=("This requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press any key to continue..."))
+  library("biomaRt")
+  cat("MsigDB7 uses ENSEMBL96 annotations from Ensembl 96\n")
+  altversion <- askYesNo("Do you want to override this selection? ")
+  if(altversion == TRUE){
+    ensemblversion <- readline(prompt=("Enter the ENSEMBL version (eg. 96) you want to use (number only): "))
+    } else if(altversion == FALSE){
+      ensemblversion <- "96"
+      cat("Using ENSEMBL96 annotations matching MSigDB7...\n")
+  }
+  ensmart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", version = ensemblversion)
+  if(txtype == 6){
+    cat("Building ENSEMBL Transcript -> Gene Symbol Mappings..\n")
+    rawchip <- getBM( attributes = c("ensembl_transcript_id","external_gene_name","description"),mart = ensmart)
+    colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
+    } else if(txtype != 6){
+      cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
+      gene <- getBM( attributes = c("ensembl_gene_id","external_gene_name","description"),mart = ensmart)
+      colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
+}}
+if(buildchip == FALSE){
+CHIPpath <- readline(prompt=("Drop appropriate CHIP File matching the namespace of identifiers into R Window or Enter File Path: "))
+rawchip <- read.table(CHIPpath, sep="\t", comment.char = "", quote="", stringsAsFactors=FALSE, fill = TRUE, header=T)}
+chip <- rawchip[c("Probe.Set.ID","Gene.Symbol")]
+colnames(chip) <- c("Raw_IDs", "NAME")
+fullchip <- unique(rawchip[c("Gene.Symbol","Gene.Title")])
+colnames(fullchip) <- c("NAME", "Description")
+
+cat("Done\n")
+cat("\n")
+
+
 #Merge Gene Expression Matrix with CHIP File and Process Identifiers
 mappedexp <- merge(x = chip, y= full2, by.x="Raw_IDs", by.y=expids, all=FALSE)
 size <- length(colnames(mappedexp))
@@ -899,44 +961,9 @@ cat("Done\n")
 outprefix <- readline(prompt=("Enter a prefix to label output files: "))
 cat("\n")
 
-if(NORM == FALSE){
-cat("Your dataset is flagged as needing normalization to be compatible with GSEA.\n")
-donormalize <- askYesNo("We can now normalize your dataset with DESEq2. Continue?")
-if(donormalize == FALSE){
-  cat("Perofrming standard filtering of low count genes without additional normalization.\n")
-  cat("You probably don't want to do this. We don't think this dataset is properly normalized.\n")
-  mappedexp_sum3 <- subset(mappedexp_sum2, rowSums(mappedexp_sum2[])>=5 )
-  protoGCT <- merge(x = fullchip, y= mappedexp_sum3, by.x="NAME", by.y=0, all=FALSE)
-  bound <- rbind(colnames(protoGCT), protoGCT)
-  bound <- rbind(NA, bound)
-  bound <- rbind(NA, bound)
-  bound[1,1] <- "#1.2"
-  numberofsamples <- length(colnames(bound))-2
-  numberofgenes <- length(bound$NAME)-3
-  bound[2,1] <- numberofgenes
-  bound[2,2] <- numberofsamples
-  cat("Writing final .GCT file for GSEA\n")
-  write.table(bound, paste0(outprefix,"_Formatted.gct"), sep="\t", quote=F, row.names=FALSE, col.names=FALSE, na="")}
-if(donormalize == TRUE) {
-  readline(prompt=("This step requires the Bioconductor package \"DESeq2\". Make sure it is installed, then press any key to continue..."))
-  cat("Loading DESeq2 Library...\n")
-  library("DESeq2")
-  cat("Begin DESeq2 Normalization...\n")
-  mappedexp_sum2 <- round(mappedexp_sum2)
-  dds <- DESeqDataSetFromMatrix(countData = mappedexp_sum2,
-                                colData = coldata,
-                                design = ~ condition)
-  keep <- rowSums(counts(dds)) >= 10
-  dds <- dds[keep,]
-  dds <- DESeq(dds)
-  res <- results(dds)
-  DESEQ2DONE <- TRUE
-}}
+
 if(DESEQ2DONE == TRUE){
 cat("Writing Size Factor Normalizated GCT\n")
-dds <- estimateSizeFactors(dds)
-norm <- counts(dds, normalized=TRUE)
-norm <- tibble::rownames_to_column(as.data.frame(norm), "NAME")
 protoGCT <- merge(x = fullchip, y= norm, by.x="NAME", by.y="NAME", all.y=TRUE)
 bound <- rbind(colnames(protoGCT), protoGCT)
 bound <- rbind(NA, bound)
@@ -966,10 +993,8 @@ cat("Writing final .GCT file for GSEA\n")
 write.table(bound, paste0(outprefix,"_Formatted.gct"), sep="\t", quote=F, row.names=FALSE, col.names=FALSE, na="")
 }
 
-if(altnorm == "usevst" | altnorm == "useall"){cat("Writing Variance Stabilizing Transformation Normalizated GCT\n")
-vsd <- vst(dds, blind=FALSE)
-vstnorm <- as.data.frame(assay(vsd))
-vstnorm <- tibble::rownames_to_column(as.data.frame(vstnorm), "NAME")
+if(altnorm == "usevst" | altnorm == "useall"){
+cat("Writing Variance Stabilizing Transformation Normalizated GCT\n")
 vstprotoGCT <- merge(x = fullchip, y= vstnorm, by.x="NAME", by.y="NAME", all.y=TRUE)
 vstbound <- rbind(colnames(vstprotoGCT), vstprotoGCT)
 vstbound <- rbind(NA, vstbound)
@@ -981,10 +1006,8 @@ vstbound[2,1] <- vstnumberofgenes
 vstbound[2,2] <- vstnumberofsamples
 write.table(vstbound, paste0(outprefix,"_vst_normalized_Counts.gct"), sep="\t", quote=F, row.names=FALSE, col.names=FALSE, na="")}
 
-if(altnorm == "userlog" | altnorm == "useall"){cat("Writing RLOG Normalizated GCT\n")
-rld <- rlog(dds, blind=FALSE)
-rlognorm <- as.data.frame(assay(rld))
-rlognorm <- tibble::rownames_to_column(as.data.frame(rlognorm), "NAME")
+if(altnorm == "userlog" | altnorm == "useall"){
+cat("Writing RLOG Normalizated GCT\n")
 rlogprotoGCT <- merge(x = fullchip, y= rlognorm, by.x="NAME", by.y="NAME", all.y=TRUE)
 rlogbound <- rbind(colnames(rlogprotoGCT), rlogprotoGCT)
 rlogbound <- rbind(NA, rlogbound)
