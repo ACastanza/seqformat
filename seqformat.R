@@ -86,14 +86,14 @@ getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary f
             if(isnormalized == FALSE){
             TYPE <- "RAWCOUNTS"}}
     } else if (any(findcounts) == FALSE){
-        cat("We couldn't detect the datatype\n")
+        cat("We couldn't automatically set the datatype\n")
         cat("We'll prompt you to manually select datatype next.\n")}
     findtxquant<- apply(geostructure,2,function(x){grepl("almon|ailfish|allisto",x)})
     if(any(findtxquant) == TRUE){
       cat("Series Matrix implies that this data might be transcript level quantifications:\n")
       print(unique(geostructure[findtxquant]))
       cat("\n")
-      cat("Validate the presence of transcript level quantifications in data files, then follow prompts.\n")
+      cat("Validate the presence of transcript level quantifications in data files, then continue.\n")
       cat("\n")
       }
   }
@@ -118,7 +118,7 @@ library("tximport")
 NORM <- FALSE
 iscounts <- FALSE
 cat("\n")
-cat("To process transcript alignments we need either an existing \"tx2gene\" file or a Gencode GTF/GFF3.\n")
+cat("To process transcript alignments we need either an existing \"tx2gene\" file, a Gencode GTF/GFF3, or we can pull from ENSEMBL.\n")
 tx2geneexists <- askYesNo("Do you have an existing tx2gene annotation file you wish to provide?")
 if(tx2geneexists == TRUE){
 tx2genepath <- readline(prompt=("Drop Your tx2gene file into R Window or Enter full path to file: "))
@@ -156,12 +156,19 @@ cat("This should be formatted as a two column file with TX IDs on the left and G
 tx2genebuild <- FALSE
 } else if (tx2geneexists == FALSE){
 cat("Ok... \n")
-cat("We can attempt to construct the tx2gene file automatically if you provide the GTF/GFF3 file used for your quantification. \n")
-cat("This requires the GenomicFeatures Package from Bioconductor to be available.\n")
-tx2genebuild <- askYesNo("(This has only been tested for Gencode Transcriptomes) Continue?")
-}
+tx2genebuild <- TRUE
+
+#SWTICH for GTF or ENSEMBL HERE [1], [2]
+cat("\n")
+cat("We can attempt to construct the tx2gene file automatically from a GTF/GFF3 transcriptome or by pulling mappings from ENSEMBL's Biomart. \n")
+cat("GTF/GFF3 processing requires the GenomicFeatures Package from Bioconductor to be available.\n")
+cat("Building from ENSEMBL requires the biomaRt Package from Bioconductor to be available.\n")
+cat("Press [1] to build a tx2gene from a GTF/GFF3 file. \n")
+cat("Press [2] to acquire transcript mappings from ENSEMBL. \n")
+tx2genesource <- readline(prompt=("[1]/[2]: "))
+if(tx2genesource == 1){
+
   if(tx2genebuild == TRUE){
-  readline(prompt=("This step requires the Bioconductor package \"GEOquery\". Make sure it is installed, then press any key to continue..."))
   library("GenomicFeatures")
   txgft <- readline(prompt=("Drop Your GTF/GFF3 file into R Window or Enter full path to file: "))
   TxDb <- makeTxDbFromGFF(file = txgft)
@@ -182,6 +189,24 @@ tx2genebuild <- askYesNo("(This has only been tested for Gencode Transcriptomes)
   cat("We can't continue with transcript level data without transcript to gene mappings...\n")
     FAIL <- TRUE
     if (FAIL == TRUE) {stop("Necessary files are not available so processing was terminated.")}}
+  }
+  if(tx2genesource == 2){
+  readline(prompt=("This step requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press any key to continue..."))
+  library("biomaRt")
+  cat("Default selected: Ensembl 96 Human\n")
+  altversion <- askYesNo("Do you want to override this selection? ")
+  if(altversion == TRUE){
+    ensemblversion <- readline(prompt=("Enter the ENSEMBL version (eg. 96) you want to use (number only): "))
+    } else if(altversion == FALSE){
+      ensemblversion <- "96"
+      cat("Using ENSEMBL96 annotations matching MSigDB7...\n")
+  }
+  ensmart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", version = ensemblversion)
+  cat("Building ENSEMBL Transcript -> Gene Symbol Mappings..\n")
+  rawtx2gene <- getBM( attributes = c("ensembl_transcript_id","external_gene_name"),mart = ensmart)
+  colnames(rawtx2gene) <- c("TXNAME","GENEID")
+  tx2gene <- distinct(rawtx2gene)
+  }}
 cat("\n")
 cat("tximport supports the following platforms:\n")
 cat("\n")
@@ -257,7 +282,7 @@ kallistotype <- readline(prompt=("Select kallisto datatype by entering \"h5\" or
 #  txi <- tximport(tmp, type = "stringtie", tx2gene = tx2gene)
   FAIL <- TRUE
 }
-if (txtype==6){
+if (txtype == 6){
   cat("Failover Mode. This method isn't really supported. Use at your own risk.\n")
   cat("Could not detect transcript quantifications with tximport.\n")
   cat(" We're going to have to make a lot of guesses here, but we'll get through this together.\n")
@@ -273,8 +298,9 @@ if (txtype==6){
     full <- read.table(txmatrix, sep="\t", header=T, row.names=NULL)
       if(colnames(full)[1] == "X"){colnames(full)[1] <- colnames(full["ID"])}
       if(colnames(full)[1] == "row.names"){colnames(full)[1] <- "ID"}}
+    #if(){} #Add folder parser  HERE
   cat("Transcript expression Matrix Imported\n")
-  txlevel <- FALSE
+  #txlevel <- FALSE
   cat("\n")
   print(head(full,3))
   cat("\n")
@@ -419,6 +445,7 @@ if (txtype==6){
         cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
         readline(prompt=("Press any key to continue...")) #Implement merge with tx2gene.
 }
+#Add tx2gene mapper HERE
   }}
 
 
@@ -467,7 +494,9 @@ txi.rsemcounts %>%
 tximportcounts<- txi.rsemcounts
 if(USEDRSEMTXLEVEL == TRUE){colnames(tximportcounts)[1] <- "txID"
   cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
-  readline(prompt=("Press any key to continue..."))}
+  readline(prompt=("Press any key to continue..."))
+#Add flag to redirect to separate tx2gene builder HERE
+}
 }
 
 if(txlevel == FALSE){
