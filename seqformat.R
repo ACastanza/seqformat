@@ -22,8 +22,8 @@ getgeofiles <- FALSE
 #Get Input Files and Prompt User for Necessary Information
 #Set Working Directory
 
-path <- readline(prompt=("Drop a directory into R window to use as the output folder or enter directory path: "))
-setwd(path)
+#path <- readline(prompt=("Drop a directory into R window to use as the output folder or enter directory path: "))
+#setwd(path)
 cat("Done\n")
 cat("\n")
 
@@ -45,8 +45,9 @@ getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary f
   cat("Files acquired from GEO:\n")
   geoimporttable <- as.data.frame(rownames(geooutfiles), stringsAsFactors=FALSE)
   print(rownames(geooutfiles))
-  print("All")
+  #print("All")
   cat("\n")
+  if(length(geoimporttable)>1){
   useall <- askYesNo("Use all downloaded files? ([N] allows you to select specific files)")
   if(useall == TRUE){genematrix <- paste0(getwd(),"/",geoid)}
   if(useall == FALSE){geoselected <- readline(prompt=("Select which GEO file to use for downstream processing: "))
@@ -60,19 +61,17 @@ getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary f
     outfile <- paste0(dirname(rownames(geooutfiles)[geoselectednumber]),"/",basename(tools::file_path_sans_ext(rownames(geooutfiles)[geoselectednumber])))
     }
   genematrix <- outfile}
+  } else if(length(geoimporttable)==1){
+    if(file_ext(rownames(geooutfiles)[1]) == "tar"){
+    untar(rownames(geooutfiles)[1], exdir=paste0(dirname(rownames(geooutfiles)[1]),"/",basename(tools::file_path_sans_ext(rownames(geooutfiles)[1]))))
+    outfile <- paste0(dirname(rownames(geooutfiles)[1]),"/",basename(tools::file_path_sans_ext(rownames(geooutfiles)[1])))
+    } else{outfile <- paste0(geoimporttable[1])}
+    genematrix <- outfile}
+
   cat("\n")
   cat("Experiment Imported.\n")
   cat("\n")
-  findnormal <- apply(geostructure,2,function(x){grepl("normalized|Normalized|NORMALIZED|normalised|Normalised|NORMALISED",x)})
-  if(any(findnormal) == TRUE){
-    cat("Series Matrix implies that this data might be ALREADY NORMALIZED:\n")
-    print(unique(geostructure[findnormal]))
-    isnormalized <- askYesNo("Is this data already normalized?")
-        if(isnormalized == TRUE){
-        NORM <- TRUE}
-  } else if (any(findnormal) == FALSE){
-      cat("Series Matrix implies that this data might require normalization.\n")
-      cat("We'll prompt you about this later.\n")}
+
   findcounts <- apply(geostructure,2,function(x){grepl("counts|Counts",x)})
   if(any(findcounts) == TRUE){
     cat("Series Matrix implies that this data consists of COUNTS:\n")
@@ -96,6 +95,19 @@ getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary f
       cat("Validate the presence of transcript level quantifications in data files, then continue.\n")
       cat("\n")
       }
+
+  findnormal <- apply(geostructure,2,function(x){grepl("normalized|Normalized|NORMALIZED|normalised|Normalised|NORMALISED",x)})
+  if(any(findnormal) == TRUE){
+    cat("Series Matrix implies that this data might be ALREADY NORMALIZED:\n")
+    print(unique(geostructure[findnormal]))
+    isnormalized <- askYesNo("Is this data already normalized?")
+        if(isnormalized == TRUE){
+        NORM <- TRUE
+        DESEQ2DONE <- FALSE}
+  } else if (any(findnormal) == FALSE){
+      cat("Series Matrix implies that this data might require normalization.\n")
+      cat("We'll prompt you about this later.\n")}
+
   }
 
 if(iscounts == FALSE){
@@ -316,7 +328,8 @@ if (txtype == 6){
   print(head(full,3))
   cat("\n")
 #  cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
-#  readline(prompt=("Press any key to continue..."))}
+#  readline(prompt=("Press any key to continue..."))
+  }
   if(getgeofiles == TRUE){
         cat("Attempting to parse multiple individually quantified samples into single matrix...\n")
         inputsamples <- list.files(outfile)
@@ -972,7 +985,7 @@ if(buildchip == TRUE){
     colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
     } else if(txtype != 6){
       cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
-      gene <- getBM( attributes = c("ensembl_gene_id","external_gene_name","description"),mart = ensmart)
+      rawchip <- getBM( attributes = c("ensembl_gene_id","external_gene_name","description"),mart = ensmart)
       colnames(rawchip) <- c("Probe.Set.ID","Gene.Symbol","Gene.Title")
 }}
 if(buildchip == FALSE){
