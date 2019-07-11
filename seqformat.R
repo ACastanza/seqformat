@@ -21,6 +21,7 @@ TYPE <- NULL
 txtype <- 0
 is_directory <- FALSE
 getgeofiles <- FALSE
+seondaryfactor <- FALSE
 
 # Get Input Files and Prompt User for Necessary Information Set Working Directory
 
@@ -29,9 +30,9 @@ setwd(path)
 cat("Done\n")
 cat("\n")
 
-getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary files\"?")
+getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary files\"? ")
 if (getgeofiles == TRUE) {
-  readline(prompt = ("This step requires the Bioconductor package \"GEOquery\". Make sure it is installed, then press any key to continue..."))
+  readline(prompt = ("This step requires the Bioconductor package \"GEOquery\". Make sure it is installed, then press enter to continue..."))
   library("GEOquery")
   library("tools")
   geoid <- readline(prompt = ("Enter the GEOID for the datafiles (eg: GSE38786): "))
@@ -92,9 +93,9 @@ if (getgeofiles == TRUE) {
     grepl("counts|Counts", x)
   })
   if (any(findcounts) == TRUE) {
-    cat("Series Matrix implies that this data consists of COUNTS:\n")
+    message("Series Matrix implies that this data consists of COUNTS:\n")
     print(unique(geostructure[findcounts]))
-    iscounts <- askYesNo("Do you agree that this is gene COUNTS data?")
+    iscounts <- askYesNo("Do you agree that this is gene COUNTS data? ")
     if (iscounts == TRUE) {
       countsdetected <- TRUE
       istx <- FALSE
@@ -113,10 +114,11 @@ if (getgeofiles == TRUE) {
     grepl("almon|ailfish|allisto", x)
   })
   if (any(findtxquant) == TRUE) {
-    cat("Series Matrix implies that this data might be transcript level quantifications:\n")
+    cat("\n")
+    message("Series Matrix implies that this data might be transcript level quantifications:\n")
     print(unique(geostructure[findtxquant]))
     cat("\n")
-    cat("Validate the presence of transcript level quantifications in data files, then continue.\n")
+    message("Validate the presence of transcript level quantifications in data files, then continue.\n")
     cat("\n")
   }
 
@@ -125,24 +127,24 @@ if (getgeofiles == TRUE) {
       x)
   })
   if (any(findnormal) == TRUE) {
-    cat("Series Matrix implies that this data might be ALREADY NORMALIZED:\n")
+    message("Series Matrix implies that this data might be ALREADY NORMALIZED:\n")
     print(unique(geostructure[findnormal]))
-    isnormalized <- askYesNo("Is this data already normalized?")
+    isnormalized <- askYesNo("Is this data already normalized? ")
     if (isnormalized == TRUE) {
       NORM <- TRUE
       DESEQ2DONE <- FALSE
     }
   } else if (any(findnormal) == FALSE) {
-    cat("Series Matrix implies that this data might require normalization.\n")
+    message("Series Matrix implies that this data might require normalization.\n")
     cat("We'll prompt you about this later.\n")
   }
 
 }
 
 if (iscounts == FALSE) {
-  istx <- askYesNo("Is your dataset transcript level abundance measurements from Salmon/Kallisto/Sailfish?")
+  istx <- askYesNo("Is your dataset transcript level abundance measurements from Salmon/Kallisto/Sailfish? ")
   if (istx == FALSE) {
-    isrsem <- askYesNo("Is your dataset raw abundance measurements from RSEM?")
+    isrsem <- askYesNo("Is your dataset raw abundance measurements from RSEM? ")
     if (isrsem == TRUE) {
       if (getgeofiles == TRUE)
         {
@@ -152,7 +154,7 @@ if (iscounts == FALSE) {
       txlevel <- TRUE
       TYPE <- "RSEM"
       NORM <- FALSE
-      readline(prompt = ("This step requires the Bioconductor package \"tximport\". Make sure it is installed, then press any key to continue..."))
+      readline(prompt = ("This step requires the Bioconductor package \"tximport\". Make sure it is installed, then press enter to continue..."))
       library("tximport")
     }
   }
@@ -160,13 +162,13 @@ if (iscounts == FALSE) {
 if (istx == TRUE) {
   TYPE <- "TXABUNDANCE"
   txlevel <- TRUE
-  readline(prompt = ("This step requires the Bioconductor package \"tximport\". Make sure it is installed, then press any key to continue..."))
+  readline(prompt = ("This step requires the Bioconductor package \"tximport\". Make sure it is installed, then press enter to continue..."))
   library("tximport")
   NORM <- FALSE
   iscounts <- FALSE
   cat("\n")
   cat("To process transcript alignments we need either an existing \"tx2gene\" file, a Gencode GTF/GFF3, or we can pull from ENSEMBL.\n")
-  tx2geneexists <- askYesNo("Do you have an existing tx2gene annotation file you wish to provide?")
+  tx2geneexists <- askYesNo("Do you have an existing tx2gene annotation file you wish to provide? ")
   if (tx2geneexists == TRUE) {
     tx2genepath <- readline(prompt = ("Drop Your tx2gene file into R Window or Enter full path to file: "))
     cat("\n")
@@ -176,12 +178,12 @@ if (istx == TRUE) {
       tx2gene <- read.table(tx2genepath, sep = ",", header = T)
       cat("Identifiers:\n")
       print(as.data.frame(head(tx2gene[, 1:2], 3)))
-      txhasversions <- askYesNo("Do your TRANSCRIPT IDs have decimal versions? (eg. ENST00000342771.9)?")
+      txhasversions <- askYesNo("Do your TRANSCRIPT IDs have decimal versions? (eg. ENST00000342771.9)? ")
       if (txhasversions == TRUE) {
         tx2gene[, 1] <- gsub("\\..*", "", tx2gene[, 1])
         txhasversions <- FALSE
       }
-      genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)?")
+      genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
       if (genehasversions == TRUE) {
         tx2gene[, 2] <- gsub("\\..*", "", tx2gene[, 2])
         genehasversions <- FALSE
@@ -190,12 +192,12 @@ if (istx == TRUE) {
     if (tx2genetype == "txt" | tx2genetype == "tsv" | tx2genetype == "tabular") {
       tx2gene <- read.table(tx2genepath, sep = "\t", header = T)
       print(head(tx2gene))
-      txhasversions <- askYesNo("Do your TRANSCRIPT IDs have decimal versions? (eg. ENST00000342771.9)?")
+      txhasversions <- askYesNo("Do your TRANSCRIPT IDs have decimal versions? (eg. ENST00000342771.9)? ")
       if (txhasversions == TRUE) {
         tx2gene[, 1] <- gsub("\\..*", "", tx2gene[, 1])
         txhasversions <- FALSE
       }
-      genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)?")
+      genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
       if (genehasversions == TRUE) {
         tx2gene[, 2] <- gsub("\\..*", "", tx2gene[, 2])
         genehasversions <- FALSE
@@ -214,8 +216,8 @@ if (istx == TRUE) {
     cat("We can attempt to construct the tx2gene file automatically from a GTF/GFF3 transcriptome or by pulling mappings from ENSEMBL's Biomart. \n")
     cat("GTF/GFF3 processing requires the GenomicFeatures Package from Bioconductor to be available.\n")
     cat("Building from ENSEMBL requires the biomaRt Package from Bioconductor to be available.\n")
-    cat("Press [1] to build a tx2gene from a GTF/GFF3 file. \n")
-    cat("Press [2] to acquire transcript mappings from ENSEMBL. \n")
+    cat("\n")
+    message("Press [1] to use mappings from a GTF/GFF3 file. Press [2] to acquire mappings from ENSEMBL. \n")
     tx2genesource <- readline(prompt = ("[1]/[2]: "))
     if (tx2genesource == 1) {
 
@@ -226,11 +228,11 @@ if (istx == TRUE) {
         k <- keys(TxDb, keytype = "TXNAME")
         tx2gene <- select(TxDb, k, "GENEID", "TXNAME")
         print(head(tx2gene, 3))
-        txhasversions <- askYesNo("Do your TRANSCRIPT IDs have decimal versions? (eg. ENST00000342771.9)?")
+        txhasversions <- askYesNo("Do your TRANSCRIPT IDs have decimal versions? (eg. ENST00000342771.9)? ")
         if (txhasversions == TRUE) {
           tx2gene[, 1] <- gsub("\\..*", "", tx2gene[, 1])
         }
-        genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)?")
+        genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
         if (genehasversions == TRUE) {
           tx2gene[, 2] <- gsub("\\..*", "", tx2gene[, 2])
           genehasversions <- FALSE
@@ -248,28 +250,34 @@ if (istx == TRUE) {
       }
     }
     if (tx2genesource == 2) {
-      readline(prompt = ("This step requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press any key to continue..."))
+      readline(prompt = ("This step requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press enter to continue..."))
       library("biomaRt")
-      cat("Default selected: Ensembl 97 Human\n")
-      altversion <- askYesNo("Do you want to override this selection? ")
+      cat("Default: Ensembl 97 Human\n")
+      altversion <- askYesNo("Do you want to override this default? ")
       if (altversion == TRUE) {
         ensemblversion <- readline(prompt = ("Enter the ENSEMBL version (eg. 96) you want to use (number only): "))
+        altspecies <- askYesNo("The default species is HUMAN you want to override this default? ")
+        if (altspecies == TRUE){
+
+        speciesnumber <- readline(prompt = ("Enter the NUMBER of the species you wish to select... "))
+
+        } else if (altspecies == FALSE){species <- "hsapiens_gene_ensembl"}
       } else if (altversion == FALSE) {
         ensemblversion <- "97"
+        species <- "hsapiens_gene_ensembl"
         cat("Using ENSEMBL97 annotations matching MSigDB7...\n")
       }
-      ensmart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl",
-        version = ensemblversion)
+      ensmart <- useEnsembl(biomart = "ensembl", dataset = species,
+        version = paste0(ensemblversion))
       cat("Building ENSEMBL Transcript -> Gene Symbol Mappings..\n")
-      rawtx2gene <- getBM(attributes = c("ensembl_transcript_id", "external_gene_name"),
+      rawtx2gene <- getBM(attributes = c("ensembl_transcript_id", "ensembl_gene_id"),
         mart = ensmart)
       colnames(rawtx2gene) <- c("TXNAME", "GENEID")
       tx2gene <- distinct(rawtx2gene)
     }
   }
   cat("\n")
-  cat("tximport supports the following platforms:\n")
-  cat("\n")
+  message("How were your transcripts quantified? tximport supports the following methods:\n")
   cat("[1] Salmon\n")
   cat("[2] Sailfish\n")
   cat("[3] Kallisto\n")
@@ -278,7 +286,7 @@ if (istx == TRUE) {
   # Table\n') cat('WARNING: ONLY SALMON [1], Sailfish [2], and KALLISTO [3] ARE
   # CURRENTLY SUPPORTED\n')
   cat("\n")
-  txtype <- readline(prompt = ("Select your platform by entering the cooresponding >>NUMBER<< (without brackets): "))
+  txtype <- readline(prompt = ("Select your platform by entering the corresponding >>NUMBER<< (without brackets): "))
   cat("\n")
   if (getgeofiles == TRUE)
     {
@@ -320,7 +328,7 @@ if (istx == TRUE) {
     cat("Import Kallisto abundances from \"abundance.h5\" (requires rhdf5 library), or \"abundance.tsv*\".\n")
     kallistotype <- readline(prompt = ("Select kallisto datatype by entering \"h5\" or \"tsv\" (without quotes): "))
     if (kallistotype == "h5") {
-      readline(prompt = ("This step requires the Bioconductor package \"rhdf5\". Make sure it is installed, then press any key to continue..."))
+      readline(prompt = ("This step requires the Bioconductor package \"rhdf5\". Make sure it is installed, then press enter to continue..."))
       library("rhdf5")
       if (getgeofiles == FALSE) {
         dir <- readline(prompt = ("Drop a directory containing Kallisto output into R Window or Enter Directory Path: "))
@@ -362,7 +370,7 @@ if (istx == TRUE) {
     # identifiers: ')) strgene <- readline(prompt=('Enter the column name that
     # contains gene identifiers for which you have a GSEA compatible chip file (or
     # gene symbols): ')) tx2gene <- tmp[, c(strtx, strgene)] print(head(tx2gene))
-    # readline(prompt=('If this looks correct, press any key to continue...')) txi <-
+    # readline(prompt=('If this looks correct, press enter to continue...')) txi <-
     # tximport(tmp, type = 'stringtie', tx2gene = tx2gene)
     FAIL <- TRUE
   }
@@ -417,7 +425,7 @@ if (istx == TRUE) {
       cat("\n")
       # cat('When you're prompted for a CHIP file, instead provide a table mapping
       # Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good
-      # Luck.\n') readline(prompt=('Press any key to continue...'))
+      # Luck.\n') readline(prompt=('Press enter to continue...'))
     }
     if (getgeofiles == TRUE) {
       cat("Attempting to parse multiple individually quantified samples into single matrix...\n")
@@ -557,7 +565,7 @@ if (istx == TRUE) {
             expidsdrop <- NULL
           }
           }
-          check <- askYesNo("Does this display only a single transcript identifier and the sample ids?")
+          check <- askYesNo("Does this display only a single transcript identifier and the sample ids? ")
           if (check == TRUE) {
           coldata <- importdataloop
           full <- fullloop
@@ -585,7 +593,7 @@ if (istx == TRUE) {
       cat("\n")
       # cat('When you're prompted for a CHIP file, instead provide a table mapping
       # Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good
-      # Luck.\n') readline(prompt=('Press any key to continue...')) #Implement merge
+      # Luck.\n') readline(prompt=('Press enter to continue...')) #Implement merge
       # with tx2gene.
     }
     # Add tx2gene mapper HERE
@@ -638,9 +646,9 @@ if (txtype == 4) {
   txi.rsemcounts <- tibble::rownames_to_column(txi.rsemcounts, "geneID")
   cat("\n")
   if (all(rsemgenetest == TRUE) == TRUE) {
-    genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)?")
+    genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
   } else if (USEDRSEMTXLEVEL == TRUE) {
-    genehasversions <- askYesNo("Do your TRANSCRIPT IDs have decimal versions? (eg. ENST00000342771.9)?")
+    genehasversions <- askYesNo("Do your TRANSCRIPT IDs have decimal versions? (eg. ENST00000342771.9)? ")
   }
   cat("\n")
   if (genehasversions == TRUE) {
@@ -654,17 +662,19 @@ if (txtype == 4) {
   if (USEDRSEMTXLEVEL == TRUE) {
     colnames(tximportcounts)[1] <- "txID"
     cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
-    readline(prompt = ("Press any key to continue..."))
-    # Add flag to redirect to separate tx2gene builder HERE
+    message("THIS IS CURRENTLY BROKEN DUE TO CHIP HANDLING CHANGES, SORRY.\n")
+    readline(prompt = ("Press enter to continue..."))
+    # Add flag to redirect to separate tx2gene builder HERE or move to before
+    # txbuilder
   }
 }
 
 if (txlevel == FALSE) {
   if (iscounts != TRUE) {
-    iscounts <- askYesNo("Is your dataset gene level COUNTS measurements from HTSeq-counts, FeatureCounts, or similar?")
+    iscounts <- askYesNo("Is your dataset gene level COUNTS measurements from HTSeq-counts, FeatureCounts, or similar? ")
     if (iscounts == TRUE) {
       if (isnormalized == FALSE) {
-        isnormalized <- askYesNo("Are your counts already normalized?")
+        isnormalized <- askYesNo("Are your counts already normalized? ")
         if (isnormalized == TRUE) {
           NORM <- TRUE
           TYPE <- "NORMCOUNTS"
@@ -728,7 +738,7 @@ if (txlevel == FALSE) {
   }
   if ((genematrixtype == "") == TRUE) {
     is_directory <- TRUE
-    cat("Directory detected. This directory must contain ONLY samples to be imported\n")
+    message("Directory detected. This directory must contain ONLY samples to be imported\n")
     cat("Attempting to parse multiple individually quantified samples into single matrix...\n")
     inputsamples <- list.files(genematrix)
     inputsamplestxt <- list.files(genematrix, pattern = ".txt|.tsv|.tabular|.tab")
@@ -843,7 +853,7 @@ if (txlevel == FALSE) {
         print(importdataloop)
         for (i in 1:as.numeric(removecols)) {
           do
-          cat("Discard everything except your Gene IDs and your per sample quantifications. \n")
+          message("Discard everything except your Gene IDs and your per sample quantifications. \n")
           expidsdrop <- readline(prompt = ("Enter a name or row number from the EXPERIMENT column above that defines fields you want to DISCARD: "))
           expiddropnumber <- match(expidsdrop, cbind(rownames(importdataloop),
           importdataloop)[, 1])
@@ -865,7 +875,7 @@ if (txlevel == FALSE) {
           expidsdrop <- NULL
           }
         }
-        check <- askYesNo("Does this display only a single gene identifier and the sample ids?")
+        check <- askYesNo("Does this display only a single gene identifier and the sample ids? ")
         if (check == TRUE) {
           coldata <- importdataloop
           full2 <- fullloop
@@ -922,7 +932,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
   repeat {
     if (geneids == "1") {
       # Prompt User for Original Experiment Namespace to Merge with CHIP On
-      cat("Gene Expression File Header:\n")
+      message("Gene Expression File Header:\n")
       cat("\n")
       coldata <- as.data.frame(colnames(full), stringsAsFactors = FALSE, header = FALSE)
       colnames(coldata) <- c("EXPERIMENT")
@@ -939,7 +949,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       # FIX ENSG_SYMBOL MERGE
       if (txlevel == FALSE) {
         if (all((grepl("_", full[, expids], fixed = TRUE))) == TRUE) {
-          readline(prompt = ("This step requires the CRAN package \"tidyr\". Make sure it is installed, then press any key to continue..."))
+          readline(prompt = ("This step requires the CRAN package \"tidyr\". Make sure it is installed, then press enter to continue..."))
           library("tidyr")
           full <- separate(full, expids, c("geneID", NA), sep = "_", remove = TRUE,
           extra = "warn")
@@ -950,7 +960,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       cat("Gene IDs:\n")
       print(head(full2[, expids], 3))
       if (txlevel == FALSE) {
-        genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)?")
+        genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
         if (genehasversions == TRUE) {
           full2[, 1] <- gsub("\\..*", "", full2[, 1])
           genehasversions <- FALSE
@@ -968,8 +978,8 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       colnames(coldata) <- c("EXPERIMENT")
       print(as.data.frame(coldata))
       cat("\n")
-      cat("We now need to pick one set of identifiers to use for downstream processing, and prune away the others one at a time.\n")
-      cat("For example, if you have both ENSEMBL Gene IDs and Gene Symbols columns KEEP the ENSEMBL IDs and DISCARD the Gene Symbols\n")
+      message("We now need to pick one set of identifiers to use for downstream processing, and prune away the others one at a time.\n")
+      message("For example, if you have both ENSEMBL Gene IDs and Gene Symbols columns KEEP the ENSEMBL IDs and DISCARD the Gene Symbols\n")
       cat("\n")
       expids <- readline(prompt = ("Enter the name or row number from the EXPERIMENT column above that defines the gene identifiers you want to KEEP: "))
       expidnumber <- match(expids, cbind(rownames(coldata), coldata)[, 1])
@@ -1005,7 +1015,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       }
       # check <- askYesNo('Does this look right?')} if(check == TRUE){ }
     }
-    check <- askYesNo("Does this display only a single gene identifier and the sample ids?")
+    check <- askYesNo("Does this display only a single gene identifier and the sample ids? ")
     if (check == TRUE) {
       coldata <- coldataloop
       full2 <- fullloop
@@ -1026,27 +1036,37 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
 
 if (median(nchar(colnames(full2))) > 25) {
   cat("Your sample names are pretty long.\n")
-  replacenames <- askYesNo("Would you like to replace them with something friendlier?")
+  replacenames <- askYesNo("Would you like to replace them with something friendlier? ")
   if (replacenames == TRUE) {
-    replacenameslength <- length(colnames(full2))
-    for (i in 1:(replacenameslength)) {
-      do
-      print(colnames(full2[i]))
-      newname <- readline(prompt = ("What would you like to call this sample? "))
-      colnames(full2)[i + 1] <- newname
+    repeat {
+      fullrename <- full2
+      replacenameslength <- length(colnames(fullrename))
+      for (i in 1:(replacenameslength)) {
+        do
+        message(paste0("[", i, "] ", colnames(fullrename[i])))
+        newname <- readline(prompt = ("What would you like to call this sample? "))
+        colnames(fullrename)[i] <- newname
+      }
+      coldatarename <- as.data.frame(colnames(fullrename), stringsAsFactors = FALSE,
+        header = TRUE)
+      colnames(coldatarename) <- c("EXPERIMENT")
+      cat("\n")
+      cat("Formatted experiment:\n")
+      print(coldatarename)
+      cat("\n")
+      check3 <- askYesNo("Do the new sample names appear correct (make absolutely sure before continuing)? ")
+      if (check3 == TRUE) {
+        coldata <- coldatarename
+        full2 <- fullrename
+        break
+      }
     }
-    coldata <- as.data.frame(colnames(full2), stringsAsFactors = FALSE, header = TRUE)
-    colnames(coldata) <- c("EXPERIMENT")
-    cat("\n")
-    cat("Formatted experiment:\n")
-    print(coldata)
-    cat("\n")
   }
 }
 
 # Prompt User for DESeq2 formatted 'coldata' Experiment Design File
-cat("We can build the GSEA CLS file from a DESeq2 \"coldata\" file.\n")
-colavailable <- askYesNo("Do you have an existing coldata file (if not, we can build one)? ")
+message("Now we'll build the GSEA CLS file using a DESeq2 \"coldata\" file.\n")
+colavailable <- askYesNo("Do you have an existing coldata file? (If \"no\", we'll build one next.) ")
 if (colavailable == TRUE) {
   design <- readline(prompt = ("Drop DESeq2 formatted coldata File into R Window or Enter File Path, see DESeq2 Tutorial for Formatting (https://bioconductor.org/packages/3.8/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#input-data): "))
   coldata <- read.table(design, sep = "\t", header = T, row.names = 1)
@@ -1055,8 +1075,10 @@ if (colavailable == TRUE) {
   cat("Okay. We'll build annotations from scratch...\n")
   # construct coldata directly
   coldata <- cbind(coldata, c(""), stringsAsFactors = FALSE)
-  idrow <- which(grepl(expids, coldata))
-  coldata <- as.data.frame(coldata[-c(idrow), ], stringsAsFactors = FALSE)
+  if (expids != 0) {
+    idrow <- which(grepl(expids, coldata))
+    coldata <- as.data.frame(coldata[-c(idrow), ], stringsAsFactors = FALSE)
+  }
   rownames(coldata) <- 1:nrow(coldata)
   colnames(coldata) <- c("name", "condition")
   looplen <- length(rownames(coldata))
@@ -1065,27 +1087,27 @@ if (colavailable == TRUE) {
   cat("\n")
   cat("We now need to generate an experimental labels file to build the GSEA CLS file.\n")
   cat("\n")
-  phnumber <- readline(prompt = ("How many phenotypes are in your experiment? (numbers only) "))
-  Phenotypes <- 0
-  for (i in 1:phnumber) {
-    do
-    cat("What single word do you want to name phenotype", paste0(i), "? ")
-    Phenotypes[i] <- readline()
-  }
-  cat("\n")
-  print(as.data.frame(Phenotypes))
-  cat("\n")
-  Phenotypeframe <- as.data.frame(Phenotypes, stringsAsFactors = FALSE)
   repeat {
+    phnumber <- readline(prompt = ("How many phenotypes are in your experiment? (numbers only) "))
+    phenotypes <- 0
+    for (i in 1:phnumber) {
+      do
+      cat("What do you want to name phenotype", paste0(i), "? ")
+      phenotypes[i] <- readline()
+    }
+    cat("\n")
+    print(as.data.frame(phenotypes))
+    cat("\n")
+    Phenotypeframe <- as.data.frame(phenotypes, stringsAsFactors = FALSE)
     for (i in 1:looplen) {
       do
       cat("Select a phenotype for sample >", paste(coldata[i, 1]), ": ")
       value <- readline()
-      Phenotypesnumber <- match(value, cbind(rownames(Phenotypeframe), Phenotypeframe)[,
+      phenotypesnumber <- match(value, cbind(rownames(Phenotypeframe), Phenotypeframe)[,
         1])
-      if (is.na(Phenotypesnumber) == TRUE) {
+      if (is.na(phenotypesnumber) == TRUE) {
         coldata[i, 2] <- value
-      } else if (Phenotypesnumber == value) {
+      } else if (phenotypesnumber == value) {
         coldata[i, 2] <- Phenotypeframe[value, ]
       }
     }
@@ -1096,18 +1118,64 @@ if (colavailable == TRUE) {
     cat("Make absolutely sure the conditions are listed correctly before continuing!\n")
     cat("We detected", paste(length(unique(coldata$condition))), "phenotypes:",
       paste(unique(coldata$condition)), "\n")
-    check2 <- askYesNo("Does the sample to phenotype assignment apear correct (make absolutely sure before continuing)?")
+    check2 <- askYesNo("Does the sample to phenotype assignment appear correct (make absolutely sure before continuing)? ")
     if (check2 == TRUE) {
       rownames(coldata) <- coldata$name
       coldata <- coldata[c(2)]
       break
     }
   }
+  if (NORM == FALSE) {
+    seondaryfactor <- askYesNo("Do you want to annotate a secondary factor (eg: sex or batch) to include in DESeq2 normalization? ")
+  }
+  if (seondaryfactor == TRUE) {
+    repeat {
+      factorlevel <- readline(prompt = ("What do you want to call this factor? "))
+      newfactor <- as.data.frame(1:nrow(coldata), stringsAsFactors = FALSE)
+      colnames(newfactor) <- c(factorlevel)
+      factornumber <- readline(prompt = ("How many levels are in this factor? (numbers only) "))
+      factortypes <- 0
+      for (i in 1:factornumber) {
+        do
+        cat("What do you want to name factor level", paste0(i), "? ")
+        factortypes[i] <- readline()
+      }
+      cat("\n")
+      print(as.data.frame(factortypes))
+      cat("\n")
+      factorframe <- as.data.frame(factortypes, stringsAsFactors = FALSE)
+      for (i in 1:looplen) {
+        do
+        cat("Select a factor level for sample >", paste(rownames(coldata)[i]),
+          ": ")
+        value <- readline()
+        factortypesnumber <- match(value, cbind(rownames(factorframe), factorframe)[,
+          1])
+        if (is.na(factortypesnumber) == TRUE) {
+          newfactor[i, 1] <- value
+        } else if (factortypesnumber == value) {
+          newfactor[i, 1] <- factorframe[value, ]
+        }
+      }
+      coldatavalidate <- cbind(coldata, newfactor, stringsAsFactors = FALSE)
+      cat("\n")
+      print(as.data.frame(coldatavalidate))
+      cat("\n")
+      cat("Make absolutely sure the conditions are listed correctly before continuing!\n")
+      cat("We detected", paste(length(unique(newfactor[, 1]))), "factor levels:",
+        paste(unique(newfactor[, 1])), "\n")
+      check2 <- askYesNo("Does the sample to factor assignment appear correct (make absolutely sure before continuing)? ")
+      if (check2 == TRUE) {
+        coldata <- coldatavalidate
+        break
+      }
+    }
+  }
 }
 
 if (NORM == FALSE) {
   cat("Your dataset is flagged as needing normalization to be compatible with GSEA.\n")
-  donormalize <- askYesNo("We can now normalize your dataset with DESEq2. Continue?")
+  donormalize <- askYesNo("We can now normalize your dataset with DESEq2. Continue? ")
   if (donormalize == FALSE) {
     cat("Perofrming standard filtering of low count genes without additional normalization.\n")
     cat("You probably don't want to do this. We don't think this dataset is properly normalized.\n")
@@ -1116,19 +1184,22 @@ if (NORM == FALSE) {
   if (donormalize == TRUE) {
 
     # SUM Counts for Identifiers Mapping to the Same Gene
-    full2 <- distinct(full2)
-    full2_sum <- full2 %>% group_by(expids) %>% summarise_all(sum) %>% data.frame()
+    if (expids != 0) {
+      full2 <- distinct(full2)
+      full2_sum <- full2 %>% group_by(expids) %>% summarise_all(sum) %>% data.frame()
 
-    # Set Gene Names as Index Column
-    full2_sum2 <- full2_sum[, -1]
-    rownames(full2_sum2) <- full2_sum[, 1]
-    rownames(coldata) <- colnames(full2_sum2)
-    full3 <- full2_sum2
-    cat("Done\n")
-    outprefix <- readline(prompt = ("Enter a prefix to label output files: "))
+      # Set Gene Names as Index Column
+      full2_sum2 <- full2_sum[, -1]
+      rownames(full2_sum2) <- full2_sum[, 1]
+      rownames(coldata) <- colnames(full2_sum2)
+      full2 <- full2_sum2
+    }
+    full3 <- full2
+#    cat("\n")
+#    outprefix <- readline(prompt = ("Enter a prefix to label output files: "))
     cat("\n")
 
-    readline(prompt = ("This step requires the Bioconductor package \"DESeq2\". Make sure it is installed, then press any key to continue..."))
+    readline(prompt = ("This step requires the Bioconductor package \"DESeq2\". Make sure it is installed, then press enter to continue..."))
     cat("Loading DESeq2 Library...\n")
     library("DESeq2")
     cat("Begin DESeq2 Normalization...\n")
@@ -1166,11 +1237,11 @@ if (altnorm == "userlog" | altnorm == "useall") {
 }
 
 # Import CHIP File for Processing
-cat("We now need to convert your gene identifiers into the MSigDB namespace using GSEA CHIP files.\n")
-cat("If your experiment uses >> HUMAN ENSEMBL IDs << we can do this automatically\n")
+message("We now need to convert your gene identifiers into the MSigDB namespace using GSEA CHIP files.\n")
+message("If your experiment uses >> HUMAN ENSEMBL IDs << we can do this automatically\n")
 buildchip <- askYesNo("Do you want to build the CHIP automatically? ")
 if (buildchip == TRUE) {
-  readline(prompt = ("This requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press any key to continue..."))
+  readline(prompt = ("This requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press enter to continue..."))
   library("biomaRt")
   cat("MsigDB7 uses annotations from Ensembl97\n")
   altversion <- askYesNo("Do you want to override this selection? ")
@@ -1181,20 +1252,14 @@ if (buildchip == TRUE) {
     cat("Using ENSEMBL97 annotations matching MSigDB7...\n")
   }
   ensmart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl",
-    version = ensemblversion)
-  if (txtype == 6) {
-    cat("Building ENSEMBL Transcript -> Gene Symbol Mappings..\n")
-    rawchip <- getBM(attributes = c("ensembl_transcript_id", "external_gene_name",
-      "description"), mart = ensmart)
-    colnames(rawchip) <- c("Probe.Set.ID", "Gene.Symbol", "Gene.Title")
-    rawchip <- distinct(rawchip)
-  } else if (txtype != 6) {
-    cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
-    rawchip <- getBM(attributes = c("ensembl_gene_id", "external_gene_name",
-      "description"), mart = ensmart)
-    colnames(rawchip) <- c("Probe.Set.ID", "Gene.Symbol", "Gene.Title")
-    rawchip <- distinct(rawchip)
-  }
+    version = paste0(ensemblversion))
+
+  cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
+  rawchip <- getBM(attributes = c("ensembl_gene_id", "external_gene_name",
+    "description"), mart = ensmart)
+  colnames(rawchip) <- c("Probe.Set.ID", "Gene.Symbol", "Gene.Title")
+  rawchip <- distinct(rawchip)
+
 }
 if (buildchip == FALSE) {
   CHIPpath <- readline(prompt = ("Drop appropriate CHIP File matching the namespace of identifiers into R Window or Enter File Path: "))
@@ -1208,7 +1273,6 @@ colnames(fullchip) <- c("NAME", "Description")
 
 cat("Done\n")
 cat("\n")
-
 
 # Merge Gene Expression Matrix with CHIP File and Process Identifiers
 mappedexp <- merge(x = chip, y = full2, by.x = "Raw_IDs", by.y = expids, all = FALSE)
@@ -1232,7 +1296,7 @@ cat("\n")
 
 if (DESEQ2DONE == TRUE) {
   cat("Writing Size Factor Normalizated GCT\n")
-  protoGCT <- merge(x = fullchip, y = norm, by.x = "NAME", by.y = "NAME", all.y = TRUE)
+  protoGCT <- merge(x = fullchip, y = mappedexp_sum2, by.x = "NAME", by.y = 0, all.y = TRUE)
   bound <- rbind(colnames(protoGCT), protoGCT)
   bound <- rbind(NA, bound)
   bound <- rbind(NA, bound)
@@ -1266,7 +1330,7 @@ if (NORM == TRUE) {
 
 if (altnorm == "usevst" | altnorm == "useall") {
   cat("Writing Variance Stabilizing Transformation Normalizated GCT\n")
-  vstprotoGCT <- merge(x = fullchip, y = vstnorm, by.x = "NAME", by.y = "NAME",
+  vstprotoGCT <- merge(x = fullchip, y = vstnorm, by.x = "NAME", by.y = 0,
     all.y = TRUE)
   vstbound <- rbind(colnames(vstprotoGCT), vstprotoGCT)
   vstbound <- rbind(NA, vstbound)
@@ -1282,7 +1346,7 @@ if (altnorm == "usevst" | altnorm == "useall") {
 
 if (altnorm == "userlog" | altnorm == "useall") {
   cat("Writing RLOG Normalizated GCT\n")
-  rlogprotoGCT <- merge(x = fullchip, y = rlognorm, by.x = "NAME", by.y = "NAME",
+  rlogprotoGCT <- merge(x = fullchip, y = rlognorm, by.x = "NAME", by.y = 0,
     all.y = TRUE)
   rlogbound <- rbind(colnames(rlogprotoGCT), rlogprotoGCT)
   rlogbound <- rbind(NA, rlogbound)
@@ -1310,4 +1374,4 @@ cls[3, ] <- clsclasses
 cat("Writing phenotype definitions .CLS file for GSEA.\n")
 write.table(cls, paste0(outprefix, "_phenotypes.cls"), sep = "\t", quote = F, row.names = FALSE,
   col.names = FALSE, na = "")
-cat("All Done!\n")
+message("All Done!\n")
