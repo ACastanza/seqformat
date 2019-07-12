@@ -418,7 +418,7 @@ if (istx == TRUE) {
         expidnumber <- match(expids, cbind(rownames(importdata), importdata)[,
           2])
       }
-      colnames(mergedexp)[expidnumber] <- "txID"
+      colnames(mergedexp)[expidnumber] <- "TXNAME"
 
       cat("Transcript expression Matrix Imported\n")
       # txlevel <- FALSE
@@ -518,7 +518,7 @@ if (istx == TRUE) {
       }
       mergedexp <- Reduce(function(x, y) merge(x, y, all = FALSE, by = expidnumber,
         all.x = TRUE, all.y = TRUE), import.list, accumulate = F)
-      colnames(mergedexp)[expidnumber] <- "txID"
+      colnames(mergedexp)[expidnumber] <- "TXNAME"
       mergedexp_2 <- mergedexp
       colnames(mergedexp_2) <- make.unique(colnames(mergedexp_2))
 
@@ -599,7 +599,7 @@ if (istx == TRUE) {
       # with tx2gene.
     }
     # Add tx2gene mapper HERE
-    full <- merge(x = tx2gene, y = full, by.x = "TXNAME", by.y = "txID")
+    full <- merge(x = tx2gene, y = full, by.x = "TXNAME", by.y = "TXNAME")
     full <- full[, -1]
     full <- distinct(full)
     full <- full %>% group_by(GENEID) %>% summarise_all(sum) %>% data.frame()
@@ -645,7 +645,7 @@ if (txtype == 4) {
   cat("\n")
   cat("Identifiers:\n")
   print(head(txi.rsemcounts[, 1], 3))
-  txi.rsemcounts <- tibble::rownames_to_column(txi.rsemcounts, "geneID")
+  txi.rsemcounts <- tibble::rownames_to_column(txi.rsemcounts, "GENEID")
   cat("\n")
   if (all(rsemgenetest == TRUE) == TRUE) {
     genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
@@ -658,11 +658,11 @@ if (txtype == 4) {
     genehasversions <- FALSE
   }
   txi.rsemcounts <- distinct(txi.rsemcounts)
-  txi.rsemcounts <- txi.rsemcounts %>% group_by(geneID) %>% summarise_all(sum) %>%
+  txi.rsemcounts <- txi.rsemcounts %>% group_by(GENEID) %>% summarise_all(sum) %>%
     data.frame()
   tximportcounts <- txi.rsemcounts
   if (USEDRSEMTXLEVEL == TRUE) {
-    colnames(tximportcounts)[1] <- "txID"
+    colnames(tximportcounts)[1] <- "TXNAME"
     cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
     message("THIS IS CURRENTLY BROKEN DUE TO CHIP HANDLING CHANGES, SORRY.\n")
     readline(prompt = ("Press enter to continue..."))
@@ -826,7 +826,7 @@ if (txlevel == FALSE) {
     }
     mergedexp <- Reduce(function(x, y) merge(x, y, all = FALSE, by = expidnumber,
       all.x = TRUE, all.y = TRUE), import.list, accumulate = F)
-    colnames(mergedexp)[expidnumber] <- "geneID"
+    colnames(mergedexp)[expidnumber] <- "GENEID"
     mergedexp_2 <- mergedexp
     colnames(mergedexp_2) <- make.unique(colnames(mergedexp_2))
 
@@ -882,7 +882,7 @@ if (txlevel == FALSE) {
           expids <- expidnumber
           displayframe <- as.data.frame(full2[expidnumber][c(1:3, 11:13),
           ])
-          colnames(displayframe) <- c("geneID")
+          colnames(displayframe) <- c("GENEID")
           print(displayframe)
           break
         }
@@ -892,7 +892,7 @@ if (txlevel == FALSE) {
       full2 <- mergedexp_2
       expids <- expidnumber
       displayframe <- as.data.frame(full2[expidnumber][c(1:3, 11:13), ])
-      colnames(displayframe) <- c("geneID")
+      colnames(displayframe) <- c("GENEID")
       print(displayframe)
     }
     genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
@@ -905,7 +905,7 @@ if (txlevel == FALSE) {
     cat("Expression Matrix Imported\n")
     cat("\n")
     displayframe <- as.data.frame(full2[expidnumber][c(1:3, 11:13), ])
-    colnames(displayframe) <- c("geneID")
+    colnames(displayframe) <- c("GENEID")
     print(displayframe)
     cat("\n")
     expids <- colnames(full2)[expids]
@@ -917,7 +917,7 @@ if (txlevel == FALSE) {
     cat("Using TXImport result...\n")
   }
   coldata <- as.data.frame(colnames(full), stringsAsFactors = FALSE, header = FALSE)
-  coldata <- rbind(c("geneID"), coldata)
+  coldata <- rbind(c("GENEID"), coldata)
   colnames(coldata) <- c("EXPERIMENT")
   expids <- 0
   full2 <- full
@@ -952,9 +952,9 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
         if (all((grepl("_", full[, expids], fixed = TRUE))) == TRUE) {
           readline(prompt = ("This step requires the CRAN package \"tidyr\". Make sure it is installed, then press enter to continue..."))
           library("tidyr")
-          full <- separate(full, expids, c("geneID", NA), sep = "_", remove = TRUE,
+          full <- separate(full, expids, c("GENEID", NA), sep = "_", remove = TRUE,
           extra = "warn")
-          expids <- "geneID"
+          expids <- "GENEID"
         }
       }
       full2 <- full
