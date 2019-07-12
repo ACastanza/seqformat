@@ -22,6 +22,7 @@ txtype <- 0
 is_directory <- FALSE
 getgeofiles <- FALSE
 seondaryfactor <- FALSE
+NORM <- FALSE
 
 # Get Input Files and Prompt User for Necessary Information Set Working Directory
 
@@ -96,15 +97,11 @@ if (getgeofiles == TRUE) {
     message("Series Matrix implies that this data consists of COUNTS:\n")
     print(unique(geostructure[findcounts]))
     iscounts <- askYesNo("Do you agree that this is gene COUNTS data? ")
+    cat("\n")
     if (iscounts == TRUE) {
       countsdetected <- TRUE
       istx <- FALSE
-      if (isnormalized == TRUE) {
-        TYPE <- "NORMCOUNTS"
-      }
-      if (isnormalized == FALSE) {
-        TYPE <- "RAWCOUNTS"
-      }
+      TYPE <- "COUNTS"
     }
   } else if (any(findcounts) == FALSE) {
     cat("We couldn't automatically set the datatype\n")
@@ -136,7 +133,11 @@ if (getgeofiles == TRUE) {
     }
   } else if (any(findnormal) == FALSE) {
     message("Series Matrix implies that this data might require normalization.\n")
-    cat("We'll prompt you about this later.\n")
+    isnormalized <- askYesNo("Is this data already normalized? ")
+    if (isnormalized == FALSE) {
+      NORM <- FALSE
+      DESEQ2DONE <- FALSE
+    }
   }
 
 }
@@ -256,12 +257,13 @@ if (istx == TRUE) {
       altversion <- askYesNo("Do you want to override this default? ")
       if (altversion == TRUE) {
         ensemblversion <- readline(prompt = ("Enter the ENSEMBL version (eg. 96) you want to use (number only): "))
-        altspecies <- askYesNo("The default species is HUMAN you want to override this default? ")
-        if (altspecies == TRUE){
-
-        speciesnumber <- readline(prompt = ("Enter the NUMBER of the species you wish to select... "))
-
-        } else if (altspecies == FALSE){species <- "hsapiens_gene_ensembl"}
+        species <- "hsapiens_gene_ensembl"
+        # altspecies <- askYesNo("The default species is HUMAN you want to override this default? ")
+        # if (altspecies == TRUE){
+        #
+        # speciesnumber <- readline(prompt = ("Enter the NUMBER of the species you wish to select... "))
+        #
+        # } else if (altspecies == FALSE){species <- "hsapiens_gene_ensembl"}
       } else if (altversion == FALSE) {
         ensemblversion <- "97"
         species <- "hsapiens_gene_ensembl"
@@ -409,7 +411,7 @@ if (istx == TRUE) {
       displayexp <- merge(x = importdata, y = t(full[c(1:3, 11:13), ]), by.x = 1,
         by.y = 0)
       print(displayexp)
-      expids <- readline(prompt = ("Enter the name or row number from the EXPERIMENT column above that defines your transcript identifiers: "))
+      expids <- readline(prompt = ("Enter the name from the EXPERIMENT column or row number above that defines your transcript identifiers: "))
       expidnumber <- match(expids, cbind(rownames(importdata), importdata)[,
         1])
       if (is.na(expidnumber) == TRUE) {
@@ -507,7 +509,7 @@ if (istx == TRUE) {
         })
         import.list <- importlist2
       }
-      expids <- readline(prompt = ("Enter the name or row number from the EXPERIMENT column above that defines your transcript identifiers: "))
+      expids <- readline(prompt = ("Enter the name from the EXPERIMENT column or row number above that defines your transcript identifiers: "))
       expidnumber <- match(expids, cbind(rownames(importdata), importdata)[,
         1])
       if (is.na(expidnumber) == TRUE) {
@@ -673,20 +675,18 @@ if (txlevel == FALSE) {
   if (iscounts != TRUE) {
     iscounts <- askYesNo("Is your dataset gene level COUNTS measurements from HTSeq-counts, FeatureCounts, or similar? ")
     if (iscounts == TRUE) {
+      TYPE <-  "COUNTS"
       if (isnormalized == FALSE) {
         isnormalized <- askYesNo("Are your counts already normalized? ")
         if (isnormalized == TRUE) {
           NORM <- TRUE
-          TYPE <- "NORMCOUNTS"
           DESEQ2DONE <- FALSE
         }
         if (isnormalized == FALSE) {
           NORM <- FALSE
-          TYPE <- "RAWCOUNTS"
         }
       } else if (isnormalized == TRUE) {
         NORM <- TRUE
-        TYPE <- "NORMCOUNTS"
         DESEQ2DONE <- FALSE
       }
     } else if (iscounts == FALSE) {
@@ -818,7 +818,7 @@ if (txlevel == FALSE) {
       })
       import.list <- importlist2
     }
-    expids <- readline(prompt = ("Enter the name or row number from the EXPERIMENT column above that defines your gene identifiers: "))
+    expids <- readline(prompt = ("Enter the name from the EXPERIMENT column or row number above that defines your gene identifiers: "))
     expidnumber <- match(expids, cbind(rownames(importdata), importdata)[, 1])
     if (is.na(expidnumber) == TRUE) {
       expidnumber <- match(expids, cbind(rownames(importdata), importdata)[,
@@ -908,6 +908,7 @@ if (txlevel == FALSE) {
     colnames(displayframe) <- c("geneID")
     print(displayframe)
     cat("\n")
+    expids <- colnames(full2)[expids]
   }
 
 } else if (txlevel == TRUE) {
@@ -938,7 +939,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       colnames(coldata) <- c("EXPERIMENT")
       print(as.data.frame(coldata))
       cat("\n")
-      expids <- readline(prompt = ("Enter the name or row number from the EXPERIMENT column above that defines your gene identifiers: "))
+      expids <- readline(prompt = ("Enter the name from the EXPERIMENT column or row number above that defines your gene identifiers: "))
       expidnumber <- match(expids, cbind(rownames(coldata), coldata)[, 1])
       if (is.na(expidnumber) == TRUE) {
         expidnumber <- FALSE
@@ -981,7 +982,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       message("We now need to pick one set of identifiers to use for downstream processing, and prune away the others one at a time.\n")
       message("For example, if you have both ENSEMBL Gene IDs and Gene Symbols columns KEEP the ENSEMBL IDs and DISCARD the Gene Symbols\n")
       cat("\n")
-      expids <- readline(prompt = ("Enter the name or row number from the EXPERIMENT column above that defines the gene identifiers you want to KEEP: "))
+      expids <- readline(prompt = ("Enter the name from the EXPERIMENT column or row number above that defines the gene identifiers you want to KEEP: "))
       expidnumber <- match(expids, cbind(rownames(coldata), coldata)[, 1])
       if (is.na(expidnumber) == TRUE) {
         expidnumber <- FALSE
@@ -992,7 +993,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       coldataloop <- coldata
       for (i in 1:(as.numeric(geneids) - 1)) {
         do
-        expidsdrop <- readline(prompt = ("Enter a name or row number from the EXPERIMENT column above that defines gene identifiers you want to DISCARD: "))
+        expidsdrop <- readline(prompt = ("Enter the name from the EXPERIMENT column or row number above that defines gene identifiers you want to DISCARD: "))
         expiddropnumber <- match(expidsdrop, cbind(rownames(coldataloop),
           coldataloop)[, 1])
         if (is.na(expiddropnumber) == TRUE) {
@@ -1020,7 +1021,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       coldata <- coldataloop
       full2 <- fullloop
       print(head(full2, 3))
-      if (TYPE == "NORMCOUNTS" | TYPE == "RAWCOUNTS" | TYPE == "TXABUNDANCE") {
+      if (TYPE == "COUNTS" | TYPE == "TXABUNDANCE") {
         genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
       } else if (TYPE == "RSEM") {
         genehasversions <- FALSE
@@ -1186,7 +1187,7 @@ if (NORM == FALSE) {
     # SUM Counts for Identifiers Mapping to the Same Gene
     if (expids != 0) {
       full2 <- distinct(full2)
-      full2_sum <- full2 %>% group_by(expids) %>% summarise_all(sum) %>% data.frame()
+      full2_sum <- full2 %>% group_by(.dots = expids) %>% summarise_all(sum) %>% data.frame()
 
       # Set Gene Names as Index Column
       full2_sum2 <- full2_sum[, -1]
@@ -1204,7 +1205,13 @@ if (NORM == FALSE) {
     library("DESeq2")
     cat("Begin DESeq2 Normalization...\n")
     full3 <- round(full3)
-    dds <- DESeqDataSetFromMatrix(countData = full3, colData = coldata, design = ~condition)
+if (seondaryfactor == TRUE) {
+des <- formula(paste("~",paste(colnames(coldata)[2], colnames(coldata)[1], sep="+")))
+dds <- DESeqDataSetFromMatrix(countData = full3, colData = coldata, design = des)
+}
+else if (seondaryfactor == FALSE) {
+dds <- DESeqDataSetFromMatrix(countData = full3, colData = coldata, design = ~ condition)
+}
     keep <- rowSums(counts(dds)) >= 10
     dds <- dds[keep, ]
     dds <- DESeq(dds)
