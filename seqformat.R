@@ -212,7 +212,6 @@ if (istx == TRUE) {
     cat("Ok... \n")
     tx2genebuild <- TRUE
 
-    # SWTICH for GTF or ENSEMBL HERE [1], [2]
     cat("\n")
     cat("We can attempt to construct the tx2gene file automatically from a GTF/GFF3 transcriptome or by pulling mappings from ENSEMBL's Biomart. \n")
     cat("GTF/GFF3 processing requires the GenomicFeatures Package from Bioconductor to be available.\n")
@@ -253,7 +252,7 @@ if (istx == TRUE) {
     if (tx2genesource == 2) {
       readline(prompt = ("This step requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press enter to continue..."))
       library("biomaRt")
-      cat("Default: Ensembl 97 Human\n")
+      cat("Default: ENSEMBL Version 97 - Human\n")
       altversion <- askYesNo("Do you want to override this default? ")
       if (altversion == TRUE) {
         ensemblversion <- readline(prompt = ("Enter the ENSEMBL version (eg. 96) you want to use (number only): "))
@@ -1250,7 +1249,7 @@ buildchip <- askYesNo("Do you want to build the CHIP automatically? ")
 if (buildchip == TRUE) {
   readline(prompt = ("This requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press enter to continue..."))
   library("biomaRt")
-  cat("MsigDB7 uses annotations from Ensembl97\n")
+  cat("MsigDB7 uses annotations from ENSEMBL97\n")
   altversion <- askYesNo("Do you want to override this selection? ")
   if (altversion == TRUE) {
     ensemblversion <- readline(prompt = ("Enter the ENSEMBL version (eg. 96) you want to use (number only): "))
