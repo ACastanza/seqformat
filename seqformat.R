@@ -257,13 +257,13 @@ if (istx == TRUE) {
       altversion <- askYesNo("Do you want to override this default? ")
       if (altversion == TRUE) {
         ensemblversion <- readline(prompt = ("Enter the ENSEMBL version (eg. 96) you want to use (number only): "))
-        species <- "hsapiens_gene_ensembl"
-        # altspecies <- askYesNo("The default species is HUMAN you want to override this default? ")
-        # if (altspecies == TRUE){
-        #
-        # speciesnumber <- readline(prompt = ("Enter the NUMBER of the species you wish to select... "))
-        #
-        # } else if (altspecies == FALSE){species <- "hsapiens_gene_ensembl"}
+        #species <- "hsapiens_gene_ensembl"
+        altspecies <- askYesNo("The default species is HUMAN you want to override this default? ")
+        if (altspecies == TRUE){
+        datasets <- as.data.frame(listDatasets(useEnsembl(biomart="ensembl",version=ensemblversion)), header =T)
+        print(datasets[1])
+        speciesnumber <- readline(prompt = ("Enter the name of the dataset for the species you wish to select... "))
+         } else if (altspecies == FALSE){species <- "hsapiens_gene_ensembl"}
       } else if (altversion == FALSE) {
         ensemblversion <- "97"
         species <- "hsapiens_gene_ensembl"
