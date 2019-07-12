@@ -600,7 +600,7 @@ if (istx == TRUE) {
     }
     # Add tx2gene mapper HERE
     full <- merge(x = tx2gene, y = full, by.x = "TXNAME", by.y = "txID")
-    # drop transcript column
+    full <- full[, -1]
     full <- distinct(full)
     full <- full %>% group_by(GENEID) %>% summarise_all(sum) %>% data.frame()
 
