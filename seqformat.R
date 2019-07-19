@@ -1,4 +1,4 @@
-# v1.4 Development copy. Restructure for TXlevel data and not-human experiments
+# v2.0.1 Development copy. Restructure for TXlevel data and non-human experiments
 
 cat("We're going to interactively process your RNA-seq data to output GSEA Compatible files.\n")
 cat("Lets get started\n")
