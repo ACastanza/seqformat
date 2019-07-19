@@ -260,8 +260,7 @@ if (istx == TRUE) {
         altspecies <- askYesNo("The default species is HUMAN you want to override this default? ")
         if (altspecies == TRUE){
         datasets <- as.data.frame(listDatasets(useEnsembl(biomart="ensembl",version=ensemblversion)), header =T)
-        print(datasets[1])
-        speciesnumber <- readline(prompt = ("Enter the name of the dataset for the species you wish to select... "))
+        species <- select.list(datasets[,1], title="Select the species of the dataset you wish to process:")
          } else if (altspecies == FALSE){species <- "hsapiens_gene_ensembl"}
       } else if (altversion == FALSE) {
         ensemblversion <- "97"
