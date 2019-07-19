@@ -2,9 +2,9 @@ The point of this script is that if you carefully follow the prompts using the i
 
 Load the script with source("/seqformat.R") from your R session.
 
-This script requires at minimum, a GSEA compatible chip file to convert to gene symbols matching the correct ENSEMBL release.
+This script requires at minimum, a GSEA compatible chip file to convert to gene symbols matching the correct ENSEMBL release. ENSEMBL97 based CHIP files targeting MSigDB7 are available for Human and Mouse Ensembl IDs, and Gene Symbols in the Additional Datafiles directory.
 
-Warning: Do not use this script to perform orthology conversions if your dataset requires normalization. It will not produce a statistically valid result (yet)/
+Warning: Orthology conversions after normalization are tentatively supported starting in the v2.0 releases. Do not attempt orthology conversion in prior builds as the results are not statistically valid.
 
 R Package Dependencies:
 
