@@ -18,18 +18,19 @@ txlevel <- FALSE
 FAIL <- FALSE
 isnormalized <- FALSE
 TYPE <- NULL
-txtype <- 0
+txtype <- "FALSE"
 is_directory <- FALSE
 getgeofiles <- FALSE
 seondaryfactor <- FALSE
 NORM <- FALSE
 
 # Get Input Files and Prompt User for Necessary Information Set Working Directory
-
-path <- readline(prompt = ("Drop a directory into R window to use as the output folder or enter directory path: "))
+changewd <- askYesNo("Would you like to set a working directory for this session?")
+if(changewd == TRUE){
+  path <- readline(prompt = ("Drop a directory into R window to use as the output folder or enter directory path: "))
 setwd(path)
 cat("Done\n")
-cat("\n")
+cat("\n")}
 
 getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary files\"? ")
 if (getgeofiles == TRUE) {
@@ -151,9 +152,9 @@ if (iscounts == FALSE) {
         {
           dir <- dirname(genematrix)
         }  #GEO
-      txtype <- 4
+      txtype <- "RSEM"
       txlevel <- TRUE
-      TYPE <- "RSEM"
+      TYPE <- txtype
       NORM <- FALSE
       readline(prompt = ("This step requires the Bioconductor package \"tximport\". Make sure it is installed, then press enter to continue..."))
       library("tximport")
@@ -278,15 +279,15 @@ if (istx == TRUE) {
   }
   cat("\n")
   message("How were your transcripts quantified? tximport supports the following methods:\n")
-  cat("[1] Salmon\n")
-  cat("[2] Sailfish\n")
-  cat("[3] Kallisto\n")
-  cat("[4] RSEM\n")
-  # cat('[5] Stringtie\n') cat('[6] Generic Transcript Level Quantification
-  # Table\n') cat('WARNING: ONLY SALMON [1], Sailfish [2], and KALLISTO [3] ARE
-  # CURRENTLY SUPPORTED\n')
-  cat("\n")
-  txtype <- readline(prompt = ("Select your platform by entering the corresponding >>NUMBER<< (without brackets): "))
+  # cat("[1] Salmon\n")
+  # cat("[2] Sailfish\n")
+  # cat("[3] Kallisto\n")
+  # cat("[4] RSEM\n")
+  # # cat('[5] Stringtie\n') cat('[6] Generic Transcript Level Quantification
+  # # Table\n')
+  # cat("\n")
+  # txtype <- readline(prompt = ("Select your platform by entering the corresponding >>NUMBER<< (without brackets): "))
+  txtype <- select.list(c("Salmon","Sailfish", "Kallisto", "RSEM","Unknown"))
   cat("\n")
   if (getgeofiles == TRUE)
     {
@@ -296,7 +297,7 @@ if (istx == TRUE) {
         dir <- dirname(genematrix)
       }
     }  #GEO
-  if (txtype == 1) {
+  if (txtype == "Salmon") {
     if (getgeofiles == FALSE) {
       dir <- readline(prompt = ("Drop a directory containing Salmon output into R Window or Enter Directory Path: "))
     }
@@ -308,9 +309,9 @@ if (istx == TRUE) {
         ignoreAfterBar = TRUE)
       tximportcounts <- as.data.frame(txi.salmon$counts)
     } else if (length(files) == 0) {
-      txtype <- 6
+      txtype <- "Unknown"
     }
-  } else if (txtype == 2) {
+  } else if (txtype == "Sailfish") {
     if (getgeofiles == FALSE) {
       dir <- readline(prompt = ("Drop a directory containing Sailfish output into R Window or Enter Directory Path: "))
     }
@@ -322,9 +323,9 @@ if (istx == TRUE) {
         ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
       tximportcounts <- as.data.frame(txi.sailfish$counts)
     } else if (length(files) == 0) {
-      txtype <- 6
+      txtype <- "Unknown"
     }
-  } else if (txtype == 3) {
+  } else if (txtype == "Kallisto") {
     cat("Import Kallisto abundances from \"abundance.h5\" (requires rhdf5 library), or \"abundance.tsv*\".\n")
     kallistotype <- readline(prompt = ("Select kallisto datatype by entering \"h5\" or \"tsv\" (without quotes): "))
     if (kallistotype == "h5") {
@@ -341,7 +342,7 @@ if (istx == TRUE) {
           ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
         tximportcounts <- as.data.frame(txi.kallisto.h5$abundance)
       } else if (length(files) == 0) {
-        txtype <- 6
+        txtype <- "Unknown"
       }
     }
     if (kallistotype == "tsv") {
@@ -356,10 +357,10 @@ if (istx == TRUE) {
           ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
         tximportcounts <- as.data.frame(txi.kallisto.tsv$abundance)
       } else if (length(files) == 0) {
-        txtype <- 6
+        txtype <- "Unknown"
       }
     }
-  } else if (txtype == 5) {
+  } else if (txtype == "Stringtie") {
     cat("Stringtie suppot not yet implemented\n")
     # cat('We can import files produced by running the \'stringtie -eB -G
     # transcripts.gff <source_file.bam>\' command per the TXImport tutorial.\n')
@@ -374,7 +375,7 @@ if (istx == TRUE) {
     # tximport(tmp, type = 'stringtie', tx2gene = tx2gene)
     FAIL <- TRUE
   }
-  if (txtype == 6) {
+  if (txtype == "Unknown") {
     cat("Failover Mode. This method isn't really supported. Use at your own risk.\n")
     cat("Could not detect transcript quantifications with tximport.\n")
     cat(" We're going to have to make a lot of guesses here, but we'll get through this together.\n")
@@ -606,8 +607,8 @@ if (istx == TRUE) {
 }
 
 
-if (txtype == 4) {
-  TYPE <- "RSEM"
+if (txtype == "RSEM") {
+  TYPE <- txtype
   if (getgeofiles == FALSE) {
     dir <- readline(prompt = ("Drop a directory containing RSEM output into R Window or Enter Directory Path: "))
   }
@@ -911,7 +912,7 @@ if (txlevel == FALSE) {
 
 } else if (txlevel == TRUE) {
   full <- tximportcounts
-  if (txtype != 6) {
+  if (txtype != "Unknown") {
     cat("Using TXImport result...\n")
   }
   coldata <- as.data.frame(colnames(full), stringsAsFactors = FALSE, header = FALSE)
