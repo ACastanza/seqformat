@@ -15,7 +15,7 @@ tools (Required)
 From CRAN:
 
 dplyr (Required. Essential!)
-tidyr (required only if necessicary to split gene identifiers merged like ENSG000001_GeneSymbol, from a weird pipleine)
+tidyr (required only if necessary to split gene identifiers merged like ENSG000001_GeneSymbol, from a weird pipleine)
 readr (optional)
 tibble (there is a call to a tibble command, but I don’t declare the library, so it must be a requirement loaded from something else)
 

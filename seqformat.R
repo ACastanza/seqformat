@@ -1,4 +1,5 @@
-# v2.2 Development copy. Restructure for TXlevel data and non-human experiments
+# seqFormatR v2.3 Development copy. Restructure for TXlevel data and non-human experiments.
+#contact acastanza@ucsd.edu with issues
 
 cat("We're going to interactively process your RNA-seq data to output GSEA Compatible files.\n")
 cat("Lets get started\n")
