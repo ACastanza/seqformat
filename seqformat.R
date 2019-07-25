@@ -1223,7 +1223,7 @@ if (DESEQ2DONE == TRUE) {
   cat("Normalizing by size factors (default)\n")
   dds <- estimateSizeFactors(dds)
   norm <- counts(dds, normalized = TRUE)
-  norm <- tibble::rownames_to_column(as.data.frame(norm), "NAME")
+  norm <- tibble::rownames_to_column(as.data.frame(norm), paste0(expids))
   full2 <- norm
 }
 
@@ -1231,14 +1231,14 @@ if (altnorm == "usevst" | altnorm == "useall") {
   cat("Normalizing using the DESeq2 variance stabilizing transformation\n")
   vsd <- vst(dds, blind = FALSE)
   vstnorm <- as.data.frame(assay(vsd))
-  vstnorm <- tibble::rownames_to_column(as.data.frame(vstnorm), "NAME")
+  vstnorm <- tibble::rownames_to_column(as.data.frame(vstnorm), paste0(expids))
 }
 
 if (altnorm == "userlog" | altnorm == "useall") {
   cat("Normalizing using the DESeq2 rlog transformation\n")
   rld <- rlog(dds, blind = FALSE)
   rlognorm <- as.data.frame(assay(rld))
-  rlognorm <- tibble::rownames_to_column(as.data.frame(rlognorm), "NAME")
+  rlognorm <- tibble::rownames_to_column(as.data.frame(rlognorm), paste0(expids))
 }
 
 
