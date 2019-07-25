@@ -38,7 +38,7 @@ if (getgeofiles == TRUE) {
   readline(prompt = ("This step requires the Bioconductor package \"GEOquery\". Make sure it is installed, then press enter to continue..."))
   library("GEOquery")
   library("tools")
-  geoid <- readline(prompt = ("Enter the GEOID for the datafiles (eg: GSE38786): "))
+  geoid <- readline(prompt = ("Enter the GEOID for the datafiles (eg: GSE107638): "))
   geooutfiles <- getGEOSuppFiles(geoid, makeDirectory = TRUE, baseDir = getwd(),
     fetch_files = TRUE, filter_regex = NULL)
   cat("Getting experiment information from Series Matrix...\n")
@@ -509,7 +509,7 @@ if (istx == TRUE | USEDRSEMTXLEVEL == TRUE) {
         txtsamplepaths <- file.path(outfile, inputsamplestxt)
         names(txtsamplepaths) <- paste0(inputsamplestxt)
         import_txt <- lapply(txtsamplepaths, read.table, header = FALSE,
-          row.names = NULL, sep = "\t", stringsAsFactors = FALSE)
+          row.names = NULL, sep = "\t", stringsAsFactors = FALSE, comment.char = "")
         for (i in 1:txtsamplenumber) {
           do
           colnames(import_txt[[i]]) <- paste(inputsamplestxt[i], colnames(import_txt[[i]]),
@@ -522,7 +522,7 @@ if (istx == TRUE | USEDRSEMTXLEVEL == TRUE) {
         csvsamplepaths <- file.path(outfile, inputsamplescsv)
         names(csvsamplepaths) <- paste0(inputsamplescsv)
         import_csv <- lapply(csvsamplepaths, read.table, header = FALSE,
-          row.names = NULL, sep = ",", stringsAsFactors = FALSE)
+          row.names = NULL, sep = ",", stringsAsFactors = FALSE, comment.char = "")
         for (i in 1:csvsamplenumber) {
           do
           colnames(import_csv[[i]]) <- paste(inputsamplestxt[i], colnames(import_csv[[i]]),
@@ -710,7 +710,7 @@ if (txlevel == FALSE) {
   library("tools")
   genematrixtype <- file_ext(gsub(".gz$", "", genematrix))
   if (genematrixtype == "csv") {
-    full <- read.table(genematrix, sep = ",", header = T, row.names = NULL)
+    full <- read.table(genematrix, sep = ",", header = T, row.names = NULL, comment.char = "")
     if (colnames(full)[1] == "X") {
       colnames(full)[1] <- "ID"
     }
@@ -725,7 +725,7 @@ if (txlevel == FALSE) {
   }
   if (genematrixtype == "txt" | genematrixtype == "tabular" | genematrixtype ==
     "tsv" | genematrixtype == "tab") {
-    full <- read.table(genematrix, sep = "\t", header = T, row.names = NULL)
+    full <- read.table(genematrix, sep = "\t", header = T, row.names = NULL, comment.char = "")
     if (colnames(full)[1] == "X") {
       colnames(full)[1] <- "ID"
     }
@@ -754,7 +754,7 @@ if (txlevel == FALSE) {
       txtsamplepaths <- file.path(genematrix, inputsamplestxt)
       names(txtsamplepaths) <- paste0(inputsamplestxt)
       import_txt <- lapply(txtsamplepaths, read.table, header = FALSE, row.names = NULL,
-        sep = "\t", stringsAsFactors = FALSE)
+        sep = "\t", stringsAsFactors = FALSE, comment.char = "")
       for (i in 1:txtsamplenumber) {
         do
         colnames(import_txt[[i]]) <- paste(inputsamplestxt[i], colnames(import_txt[[i]]),
@@ -767,7 +767,7 @@ if (txlevel == FALSE) {
       csvsamplepaths <- file.path(genematrix, inputsamplescsv)
       names(csvsamplepaths) <- paste0(inputsamplescsv)
       import_csv <- lapply(csvsamplepaths, read.table, header = FALSE, row.names = NULL,
-        sep = ",", stringsAsFactors = FALSE)
+        sep = ",", stringsAsFactors = FALSE, comment.char = "")
       for (i in 1:csvsamplenumber) {
         do
         colnames(import_csv[[i]]) <- paste(inputsamplestxt[i], colnames(import_csv[[i]]),
@@ -939,8 +939,20 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
         if (all((grepl("_", full[, expids], fixed = TRUE))) == TRUE) {
           readline(prompt = ("This step requires the CRAN package \"tidyr\". Make sure it is installed, then press enter to continue..."))
           library("tidyr")
-          full <- separate(full, expids, c("GENEID", NA), sep = "_", remove = TRUE,
-          extra = "warn")
+          splitids <- as.data.frame(full[,expids])
+          splitnames <- separate(split, 1, c("ID_1", "ID_2"), sep = "_", remove = TRUE, extra = "warn", fixed=TRUE)
+          head(splitnames)
+          keepid <- menu(c("ID_1","ID_2"), title="Which ID do you want to keep?")
+          full[,expids] <- splitnames[,keepid]
+          colnames(full)[expids] <- "GENEID"
+          expids <- "GENEID"
+        }
+        if (all((grepl("|", full[, expids], fixed = TRUE))) == TRUE){
+          splitids <- as.data.frame(full[,expids])
+          splitnames <- separate(split, 1, c("ID_1", "ID_2"), sep = "\\|", remove = TRUE, extra = "warn", fixed=TRUE)
+          keepid <- menu(c("ID_1","ID_2"), title="Which ID do you want to keep?")
+          full[,expids] <- splitnames[,keepid]
+          colnames(full)[expids] <- "GENEID"
           expids <- "GENEID"
         }
       }
