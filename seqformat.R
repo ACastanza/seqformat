@@ -23,6 +23,7 @@ is_directory <- FALSE
 getgeofiles <- FALSE
 seondaryfactor <- FALSE
 NORM <- FALSE
+USEDRSEMTXLEVEL <- FALSE
 
 # Get Input Files and Prompt User for Necessary Information Set Working Directory
 changewd <- askYesNo("Would you like to set a working directory for this session?")
@@ -161,7 +162,64 @@ if (iscounts == FALSE) {
     }
   }
 }
-if (istx == TRUE) {
+
+if (txtype == "RSEM") {
+  TYPE <- txtype
+  if (getgeofiles == FALSE) {
+    dir <- readline(prompt = ("Drop a directory containing RSEM output into R Window or Enter Directory Path: "))
+  }
+  rsemcontents <- as.data.frame(paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir,
+    recursive = TRUE, full.names = FALSE, pattern = ".results.gz")))), stringsAsFactors = FALSE)
+  rsemgenes <- as.data.frame(paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir,
+    recursive = TRUE, full.names = FALSE, pattern = ".genes.results.gz")))),
+    stringsAsFactors = FALSE)
+  rsemtxs <- as.data.frame(paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir,
+    recursive = TRUE, full.names = FALSE, pattern = ".isoforms.results.gz")))),
+    stringsAsFactors = FALSE)
+  rsemgenetest <- rsemgenes[, 1] %in% rsemcontents[, 1]
+  rsemtxtest <- rsemtxs[, 1] %in% rsemcontents[, 1]
+  if (all(rsemgenetest == TRUE) == TRUE) {
+    cat("Gene level RSEM quantifications are available. Using these directly.\n ")
+    USEDRSEMTXLEVEL <- FALSE
+    files <- list.files(dir, recursive = TRUE, full.names = TRUE, pattern = ".genes.results.gz")
+    names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir,
+      recursive = TRUE, full.names = FALSE, pattern = ".genes.results.gz"))))
+    txi.rsem <- tximport(files, type = "rsem", txIn = FALSE, txOut = FALSE)
+    txi.rsemcounts <- as.data.frame(txi.rsem$counts)
+  } else if (all(rsemtxtest == TRUE) == TRUE) {
+    cat("Gene level RSEM quantifications are NOT available.\n ")
+    cat("Using RSEM isoform abundances. This is a little messy.\n ")
+    USEDRSEMTXLEVEL <- TRUE
+    files <- list.files(dir, recursive = TRUE, full.names = TRUE, pattern = ".isoforms.results.gz")
+    names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir,
+      recursive = TRUE, full.names = FALSE, pattern = ".isoforms.results.gz"))))
+    txi.rsem <- tximport(files, type = "rsem", txIn = TRUE, txOut = TRUE)
+    txi.rsemcounts <- as.data.frame(txi.rsem$counts)
+  }
+  print("Done")  #fixes a small bug in tximport rsem output
+  cat("\n")
+  cat("Identifiers:\n")
+  print(head(txi.rsemcounts[, 1], 3))
+  txi.rsemcounts <- tibble::rownames_to_column(txi.rsemcounts, "GENEID")
+  cat("\n")
+  if (all(rsemgenetest == TRUE) == TRUE) {
+    genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
+  } else if (USEDRSEMTXLEVEL == TRUE) {
+    colnames(txi.rsemcounts)[1] <- "TXNAME"
+    genehasversions <- askYesNo("Do your TRANSCRIPT IDs have decimal versions? (eg. ENST00000342771.9)? ")
+  }
+  cat("\n")
+  if (genehasversions == TRUE) {
+    txi.rsemcounts[, 1] <- gsub("\\..*", "", txi.rsemcounts[, 1])
+    genehasversions <- FALSE
+  }
+  txi.rsemcounts <- distinct(txi.rsemcounts)
+  txi.rsemcounts <- txi.rsemcounts %>% group_by(GENEID) %>% summarise_all(sum) %>%
+    data.frame()
+  tximportcounts <- txi.rsemcounts
+}
+
+if (istx == TRUE | USEDRSEMTXLEVEL == TRUE) {
   TYPE <- "TXABUNDANCE"
   txlevel <- TRUE
   readline(prompt = ("This step requires the Bioconductor package \"tximport\". Make sure it is installed, then press enter to continue..."))
@@ -281,12 +339,12 @@ if (istx == TRUE) {
   # cat("[1] Salmon\n")
   # cat("[2] Sailfish\n")
   # cat("[3] Kallisto\n")
-  # cat("[4] RSEM\n")
   # # cat('[5] Stringtie\n') cat('[6] Generic Transcript Level Quantification
   # # Table\n')
   # cat("\n")
   # txtype <- readline(prompt = ("Select your platform by entering the corresponding >>NUMBER<< (without brackets): "))
-  txtype <- select.list(c("Salmon", "Sailfish", "Kallisto", "RSEM", "Unknown"))
+  if (USEDRSEMTXLEVEL != TRUE){
+  txtype <- select.list(c("Salmon", "Sailfish", "Kallisto", "Unknown"))
   cat("\n")
   if (getgeofiles == TRUE)
     {
@@ -436,7 +494,7 @@ if (istx == TRUE) {
       # cat('When you're prompted for a CHIP file, instead provide a table mapping
       # Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good
       # Luck.\n') readline(prompt=('Press enter to continue...'))
-    }
+    }}
     if (getgeofiles == TRUE) {
       cat("Attempting to parse multiple individually quantified samples into single matrix...\n")
       inputsamples <- list.files(outfile)
@@ -605,78 +663,14 @@ if (istx == TRUE) {
       # Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good
       # Luck.\n') readline(prompt=('Press enter to continue...')) #Implement merge
       # with tx2gene.
-    }
+    }}
     # Add tx2gene mapper HERE
     full <- merge(x = tx2gene, y = full, by.x = "TXNAME", by.y = "TXNAME")
     full <- full[, -1]
     full <- distinct(full)
     full <- full %>% group_by(GENEID) %>% summarise_all(sum) %>% data.frame()
     expids <- "GENEID"
-  }
-}
 
-
-if (txtype == "RSEM") {
-  TYPE <- txtype
-  if (getgeofiles == FALSE) {
-    dir <- readline(prompt = ("Drop a directory containing RSEM output into R Window or Enter Directory Path: "))
-  }
-  rsemcontents <- as.data.frame(paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir,
-    recursive = TRUE, full.names = FALSE, pattern = ".results.gz")))), stringsAsFactors = FALSE)
-  rsemgenes <- as.data.frame(paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir,
-    recursive = TRUE, full.names = FALSE, pattern = ".genes.results.gz")))),
-    stringsAsFactors = FALSE)
-  rsemtxs <- as.data.frame(paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir,
-    recursive = TRUE, full.names = FALSE, pattern = ".isoforms.results.gz")))),
-    stringsAsFactors = FALSE)
-  rsemgenetest <- rsemgenes[, 1] %in% rsemcontents[, 1]
-  rsemtxtest <- rsemtxs[, 1] %in% rsemcontents[, 1]
-  if (all(rsemgenetest == TRUE) == TRUE) {
-    cat("Gene level RSEM quantifications are available. Using these directly.\n ")
-    USEDRSEMTXLEVEL <- FALSE
-    files <- list.files(dir, recursive = TRUE, full.names = TRUE, pattern = ".genes.results.gz")
-    names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir,
-      recursive = TRUE, full.names = FALSE, pattern = ".genes.results.gz"))))
-    txi.rsem <- tximport(files, type = "rsem", txIn = FALSE, txOut = FALSE)
-    txi.rsemcounts <- as.data.frame(txi.rsem$counts)
-  } else if (all(rsemtxtest == TRUE) == TRUE) {
-    cat("Gene level RSEM quantifications are NOT available.\n ")
-    cat("Using RSEM isoform abundances. This is a little messy.\n ")
-    USEDRSEMTXLEVEL <- TRUE
-    files <- list.files(dir, recursive = TRUE, full.names = TRUE, pattern = ".isoforms.results.gz")
-    names(files) <- paste0(tools::file_path_sans_ext(tools::file_path_sans_ext(list.files(dir,
-      recursive = TRUE, full.names = FALSE, pattern = ".isoforms.results.gz"))))
-    txi.rsem <- tximport(files, type = "rsem", txIn = TRUE, txOut = TRUE)
-    txi.rsemcounts <- as.data.frame(txi.rsem$counts)
-  }
-  print("Done")  #fixes a small bug in tximport rsem output
-  cat("\n")
-  cat("Identifiers:\n")
-  print(head(txi.rsemcounts[, 1], 3))
-  txi.rsemcounts <- tibble::rownames_to_column(txi.rsemcounts, "GENEID")
-  cat("\n")
-  if (all(rsemgenetest == TRUE) == TRUE) {
-    genehasversions <- askYesNo("Do your GENE IDs have decimal versions? (eg. ENSG00000158321.16)? ")
-  } else if (USEDRSEMTXLEVEL == TRUE) {
-    genehasversions <- askYesNo("Do your TRANSCRIPT IDs have decimal versions? (eg. ENST00000342771.9)? ")
-  }
-  cat("\n")
-  if (genehasversions == TRUE) {
-    txi.rsemcounts[, 1] <- gsub("\\..*", "", txi.rsemcounts[, 1])
-    genehasversions <- FALSE
-  }
-  txi.rsemcounts <- distinct(txi.rsemcounts)
-  txi.rsemcounts <- txi.rsemcounts %>% group_by(GENEID) %>% summarise_all(sum) %>%
-    data.frame()
-  tximportcounts <- txi.rsemcounts
-  if (USEDRSEMTXLEVEL == TRUE) {
-    colnames(tximportcounts)[1] <- "TXNAME"
-    cat("When you're prompted for a CHIP file, instead provide a table mapping Transcript IDs to Gene Symbols and Descriptions USING CHIP HEADERS. Good Luck.\n")
-    message("THIS IS CURRENTLY BROKEN DUE TO CHIP HANDLING CHANGES, SORRY.\n")
-    readline(prompt = ("Press enter to continue..."))
-    # Add flag to redirect to separate tx2gene builder HERE or move to before
-    # txbuilder
-  }
 }
 
 if (txlevel == FALSE) {
@@ -918,20 +912,7 @@ if (txlevel == FALSE) {
     cat("\n")
     expids <- colnames(full2)[expids]
   }
-
-} else if (txlevel == TRUE) {
-  full <- tximportcounts
-  if (txtype != "Unknown") {
-    cat("Using TXImport result...\n")
-  }
-  coldata <- as.data.frame(colnames(full), stringsAsFactors = FALSE, header = FALSE)
-  colnames(coldata) <- c("EXPERIMENT")
-  full2 <- full
-  cat("\n")
-  print(head(full2, 3))
-  cat("\n")
 }
-
 if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
   cat("There are", paste(length(colnames(full))), "columns in your data table.\n")
   samplesize <- readline(prompt = ("How many of these are sequenced SAMPLES? "))
@@ -1039,7 +1020,20 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       break
     }
   }
+} else if (txlevel == TRUE) {
+  full <- tximportcounts
+  if (txtype != "Unknown") {
+    cat("Using TXImport result...\n")
+  }
+  coldata <- as.data.frame(colnames(full), stringsAsFactors = FALSE, header = FALSE)
+  colnames(coldata) <- c("EXPERIMENT")
+  full2 <- full
+  cat("\n")
+  print(head(full2, 3))
+  cat("\n")
 }
+
+
 
 if (median(nchar(colnames(full2))) > 25) {
   cat("Your sample names are pretty long.\n")
