@@ -946,7 +946,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
           cat("\n")
           keepid <- menu(c("ID_1","ID_2"), title="Which ID do you want to keep?")
           full[,expids] <- splitnames[,keepid]
-          colnames(full)[expids] <- "GENEID"
+          colnames(full)[1] <- "GENEID"
           expids <- "GENEID"
         }
         if (all((grepl("|", full[, expids], fixed = TRUE))) == TRUE){
@@ -958,7 +958,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
           cat("\n")
           keepid <- menu(c("ID_1","ID_2"), title="Which ID do you want to keep?")
           full[,expids] <- splitnames[,keepid]
-          colnames(full)[expids] <- "GENEID"
+          colnames(full)[1] <- "GENEID"
           expids <- "GENEID"
         }
       }
