@@ -1228,6 +1228,21 @@ if (DESEQ2DONE == TRUE) {
   full2 <- norm
 }
 
+if (altnorm == "usevst" | altnorm == "useall") {
+  cat("Normalizing using the DESeq2 variance stabilizing transformation\n")
+  vsd <- vst(dds, blind = FALSE)
+  vstnorm <- as.data.frame(assay(vsd))
+  vstnorm <- tibble::rownames_to_column(as.data.frame(vstnorm), "NAME")
+}
+
+if (altnorm == "userlog" | altnorm == "useall") {
+  cat("Normalizing using the DESeq2 rlog transformation\n")
+  rld <- rlog(dds, blind = FALSE)
+  rlognorm <- as.data.frame(assay(rld))
+  rlognorm <- tibble::rownames_to_column(as.data.frame(rlognorm), "NAME")
+}
+
+
 # Import CHIP File for Processing
 message("We now need to convert your gene identifiers into the MSigDB namespace using GSEA CHIP files.\n")
 message("If your experiment uses >> HUMAN ENSEMBL IDs << we can do this automatically\n")
@@ -1267,21 +1282,20 @@ cat("Done\n")
 cat("\n")
 
 # Merge Gene Expression Matrix with CHIP File and Process Identifiers
+if(altnorm == FALSE){
 mappedexp <- merge(x = chip, y = full2, by.x = "Raw_IDs", by.y = expids, all = FALSE)
 size <- length(colnames(mappedexp))
 mappedexp <- mappedexp[c(2:size)]
-
 cat("Summing Counts that mapped to the same gene after applying mapping chip\n")
-
 # SUM Counts for Identifiers Mapping to the Same Gene
 mappedexp <- distinct(mappedexp)
 mappedexp_sum <- mappedexp %>% group_by(NAME) %>% summarise_all(sum) %>% data.frame()
-
 # Set Gene Names as Index Column
 mappedexp_sum2 <- mappedexp_sum[, -1]
 rownames(mappedexp_sum2) <- mappedexp_sum[, 1]
 rownames(coldata) <- colnames(mappedexp_sum2)
-cat("Done\n")
+cat("Done\n")}
+
 outprefix <- readline(prompt = ("Enter a prefix to label output files: "))
 cat("\n")
 
@@ -1321,6 +1335,19 @@ if (NORM == TRUE) {
 }
 
 if (altnorm == "usevst" | altnorm == "useall") {
+fullvst <- vstnorm
+mappedexp <- merge(x = chip, y = fullvst, by.x = "Raw_IDs", by.y = expids, all = FALSE)
+size <- length(colnames(mappedexp))
+mappedexp <- mappedexp[c(2:size)]
+cat("Summing Counts that mapped to the same gene after applying mapping chip\n")
+# SUM Counts for Identifiers Mapping to the Same Gene
+mappedexp <- distinct(mappedexp)
+mappedexp_sum <- mappedexp %>% group_by(NAME) %>% summarise_all(sum) %>% data.frame()
+# Set Gene Names as Index Column
+mappedexp_sum2 <- mappedexp_sum[, -1]
+rownames(mappedexp_sum2) <- mappedexp_sum[, 1]
+rownames(coldata) <- colnames(mappedexp_sum2)
+cat("Done\n")
   cat("Writing Variance Stabilizing Transformation Normalizated GCT\n")
   vstprotoGCT <- merge(x = fullchip, y = vstnorm, by.x = "NAME", by.y = 0,
     all.y = TRUE)
@@ -1337,6 +1364,19 @@ if (altnorm == "usevst" | altnorm == "useall") {
 }
 
 if (altnorm == "userlog" | altnorm == "useall") {
+fullrlog <- rlognorm
+mappedexp <- merge(x = chip, y = fullrlog, by.x = "Raw_IDs", by.y = expids, all = FALSE)
+size <- length(colnames(mappedexp))
+mappedexp <- mappedexp[c(2:size)]
+cat("Summing Counts that mapped to the same gene after applying mapping chip\n")
+# SUM Counts for Identifiers Mapping to the Same Gene
+mappedexp <- distinct(mappedexp)
+mappedexp_sum <- mappedexp %>% group_by(NAME) %>% summarise_all(sum) %>% data.frame()
+# Set Gene Names as Index Column
+mappedexp_sum2 <- mappedexp_sum[, -1]
+rownames(mappedexp_sum2) <- mappedexp_sum[, 1]
+rownames(coldata) <- colnames(mappedexp_sum2)
+cat("Done\n")
   cat("Writing RLOG Normalizated GCT\n")
   rlogprotoGCT <- merge(x = fullchip, y = rlognorm, by.x = "NAME", by.y = 0,
     all.y = TRUE)
