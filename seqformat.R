@@ -602,7 +602,8 @@ if (istx == TRUE) {
     full <- full[, -1]
     full <- distinct(full)
     full <- full %>% group_by(GENEID) %>% summarise_all(sum) %>% data.frame()
-
+    expids <- NULL
+    expids <- 1
   }
 }
 
