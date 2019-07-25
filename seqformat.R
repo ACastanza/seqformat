@@ -318,7 +318,8 @@ if (istx == TRUE | USEDRSEMTXLEVEL == TRUE) {
         altspecies <- askYesNo("The default species is HUMAN you want to override this default? ")
         if (altspecies == TRUE){
         datasets <- as.data.frame(listDatasets(useEnsembl(biomart="ensembl",version=ensemblversion)), header =T)
-        species <- select.list(datasets[,1], title="Select the species of the dataset you wish to process:")
+        speciesnumber <- menu(datasets[,2], title="Select the species of the dataset you wish to process:")
+        species <- datasets[speciesnumber,1]
          } else if (altspecies == FALSE){species <- "hsapiens_gene_ensembl"}
       } else if (altversion == FALSE) {
         ensemblversion <- "97"
@@ -1262,8 +1263,7 @@ if (altnorm == "userlog" | altnorm == "useall") {
 
 # Import CHIP File for Processing
 message("We now need to convert your gene identifiers into the MSigDB namespace using GSEA CHIP files.\n")
-message("If your experiment uses >> HUMAN ENSEMBL IDs << we can do this automatically\n")
-buildchip <- askYesNo("Do you want to build the CHIP automatically? ")
+buildchip <- askYesNo("Do you want to build the CHIP automatically from BiomaRt? (not recommended if MSigDB CHIP is available) ")
 if (buildchip == TRUE) {
   readline(prompt = ("This requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press enter to continue..."))
   library("biomaRt")
@@ -1275,16 +1275,22 @@ if (buildchip == TRUE) {
     ensemblversion <- "97"
     cat("Using ENSEMBL97 annotations matching MSigDB7...\n")
   }
-  ensmart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl",
-    version = paste0(ensemblversion))
-
+  altspecies <- askYesNo("The default species is HUMAN you want to override this default? ")
+    if (altspecies == TRUE) {
+    warning("This method is not supported. We do not recommend doing this.")
+    datasets <- as.data.frame(listDatasets(useEnsembl(biomart="ensembl",version=ensemblversion)), header =T)
+    speciesnumber <- menu(datasets[,2], title="Select the species of the dataset you wish to process:")
+    species <- datasets[speciesnumber,1]
+    ensorthomart <- useEnsembl(biomart = "ensembl", dataset = species, version = paste0(ensemblversion))
+    orthology <- getBM(attributes = c("ensembl_gene_id", "hsapiens_homolog_ensembl_gene"), mart = ensorthomart)
+    }
+  ensmart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", version = paste0(ensemblversion))
   cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
-  rawchip <- getBM(attributes = c("ensembl_gene_id", "external_gene_name",
-    "description"), mart = ensmart)
+  rawchip <- getBM(attributes = c("ensembl_gene_id", "external_gene_name", "description"), mart = ensmart)
   colnames(rawchip) <- c("Probe.Set.ID", "Gene.Symbol", "Gene.Title")
   rawchip <- distinct(rawchip)
-
 }
+
 if (buildchip == FALSE) {
   CHIPpath <- readline(prompt = ("Drop appropriate CHIP File matching the namespace of identifiers into R Window or Enter File Path: "))
   rawchip <- read.table(CHIPpath, sep = "\t", comment.char = "", quote = "", stringsAsFactors = FALSE,
@@ -1297,6 +1303,18 @@ colnames(fullchip) <- c("NAME", "Description")
 
 cat("Done\n")
 cat("\n")
+
+if (altspecies == TRUE){
+orthoexp <- merge(x = orthology, y = full2, by.x = 1, by.y = expids, all = FALSE)
+orthoexp_2 <- orthoexp[,2:length(colnames(orthoexp))]
+orthoexp_3 <- orthoexp_2[orthoexp_2[,1] != "",]
+colnames(orthoexp_3)[1] <- expids
+cat("Summing orthologues as components of pseudo-metagenes...\n")
+cat("This is almost certianly a bad way of doing this...\n")
+message("We did warn you not to do this...")
+orthoexp_max <- orthoexp_3 %>% group_by(.dots = expids) %>% summarise_all(sum) %>% data.frame()
+full2 <- orthoexp_max
+}
 
 # Merge Gene Expression Matrix with CHIP File and Process Identifiers
 if(altnorm == FALSE){
