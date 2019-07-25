@@ -214,12 +214,11 @@ if (istx == TRUE) {
     tx2genebuild <- TRUE
 
     cat("\n")
-    cat("We can attempt to construct the tx2gene file automatically from a GTF/GFF3 transcriptome or by pulling mappings from ENSEMBL's Biomart. \n")
-    cat("GTF/GFF3 processing requires the GenomicFeatures Package from Bioconductor to be available.\n")
-    cat("Building from ENSEMBL requires the biomaRt Package from Bioconductor to be available.\n")
+    cat("We can attempt to construct the tx2gene file automatically. \n")
+    cat("Building from a GTF/GFF3, which requires the GenomicFeatures Package from Bioconductor.\n")
+    cat("Building from ENSEMBL, which requires the biomaRt Package from Bioconductor.\n")
     cat("\n")
-    message("Press [1] to use mappings from a GTF/GFF3 file. Press [2] to acquire mappings from ENSEMBL. \n")
-    tx2genesource <- readline(prompt = ("[1]/[2]: "))
+    tx2genesource <- menu(c("Use GTF/GFF3 file","Use ENSEMBL"))
     if (tx2genesource == 1) {
 
       if (tx2genebuild == TRUE) {
@@ -270,7 +269,7 @@ if (istx == TRUE) {
       }
       ensmart <- useEnsembl(biomart = "ensembl", dataset = species,
         version = paste0(ensemblversion))
-      cat("Building ENSEMBL Transcript -> Gene Symbol Mappings..\n")
+      cat("Building ENSEMBL Transcript -> Gene Symbol Mappings...\n")
       rawtx2gene <- getBM(attributes = c("ensembl_transcript_id", "ensembl_gene_id"),
         mart = ensmart)
       colnames(rawtx2gene) <- c("TXNAME", "GENEID")
@@ -287,7 +286,7 @@ if (istx == TRUE) {
   # # Table\n')
   # cat("\n")
   # txtype <- readline(prompt = ("Select your platform by entering the corresponding >>NUMBER<< (without brackets): "))
-  txtype <- select.list(c("Salmon","Sailfish", "Kallisto", "RSEM","Unknown"))
+  txtype <- select.list(c("Salmon", "Sailfish", "Kallisto", "RSEM", "Unknown"))
   cat("\n")
   if (getgeofiles == TRUE)
     {
@@ -308,6 +307,8 @@ if (istx == TRUE) {
       txi.salmon <- tximport(files, type = "salmon", tx2gene = tx2gene, ignoreTxVersion = TRUE,
         ignoreAfterBar = TRUE)
       tximportcounts <- as.data.frame(txi.salmon$counts)
+        tximportcounts <- tibble::rownames_to_column(tximportcounts, "GENEID")
+        expids <- "GENEID"
     } else if (length(files) == 0) {
       txtype <- "Unknown"
     }
@@ -322,6 +323,8 @@ if (istx == TRUE) {
       txi.sailfish <- tximport(files, type = "sailfish", tx2gene = tx2gene,
         ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
       tximportcounts <- as.data.frame(txi.sailfish$counts)
+        tximportcounts <- tibble::rownames_to_column(tximportcounts, "GENEID")
+        expids <- "GENEID"
     } else if (length(files) == 0) {
       txtype <- "Unknown"
     }
@@ -341,6 +344,8 @@ if (istx == TRUE) {
         txi.kallisto.h5 <- tximport(files, type = "kallisto", tx2gene = tx2gene,
           ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
         tximportcounts <- as.data.frame(txi.kallisto.h5$abundance)
+        tximportcounts <- tibble::rownames_to_column(tximportcounts, "GENEID")
+        expids <- "GENEID"
       } else if (length(files) == 0) {
         txtype <- "Unknown"
       }
@@ -356,6 +361,8 @@ if (istx == TRUE) {
         txi.kallisto.tsv <- tximport(files, type = "kallisto", tx2gene = tx2gene,
           ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
         tximportcounts <- as.data.frame(txi.kallisto.tsv$abundance)
+        tximportcounts <- tibble::rownames_to_column(tximportcounts, "GENEID")
+        expids <- "GENEID"
       } else if (length(files) == 0) {
         txtype <- "Unknown"
       }
@@ -402,7 +409,9 @@ if (istx == TRUE) {
           colnames(full)[1] <- "ID"
         }
       }
-      # if(){} #Add folder parser HERE
+      if(txmatrixtype == ""){
+        message("Directory parsing is not yet supported through this prompt. Sorry.")
+          FAIL <- TRUE} #Add folder parser HERE
       importdata <- as.data.frame(colnames(full), stringsAsFactors = FALSE,
         header = FALSE)
       colnames(full)[1] <- "EXPERIMENT"
@@ -418,7 +427,7 @@ if (istx == TRUE) {
           2])
       }
       colnames(mergedexp)[expidnumber] <- "TXNAME"
-
+#      expids <- "TXNAME"
       cat("Transcript expression Matrix Imported\n")
       # txlevel <- FALSE
       cat("\n")
@@ -916,7 +925,6 @@ if (txlevel == FALSE) {
     cat("Using TXImport result...\n")
   }
   coldata <- as.data.frame(colnames(full), stringsAsFactors = FALSE, header = FALSE)
-  coldata <- rbind(c("GENEID"), coldata)
   colnames(coldata) <- c("EXPERIMENT")
   full2 <- full
   cat("\n")
@@ -1040,11 +1048,11 @@ if (median(nchar(colnames(full2))) > 25) {
     repeat {
       fullrename <- full2
       replacenameslength <- length(colnames(fullrename))
-      for (i in 1:(replacenameslength)) {
+      for (i in 1:(replacenameslength - 1)) {
         do
-        message(paste0("[", i, "] ", colnames(fullrename[i])))
+        message(paste0("[", (i + 1), "] ", colnames(fullrename[i + 1])))
         newname <- readline(prompt = ("What would you like to call this sample? "))
-        colnames(fullrename)[i] <- newname
+        colnames(fullrename)[i + 1] <- newname
       }
       coldatarename <- as.data.frame(colnames(fullrename), stringsAsFactors = FALSE,
         header = TRUE)
@@ -1196,8 +1204,6 @@ if (NORM == FALSE) {
 #    cat("\n")
 #    outprefix <- readline(prompt = ("Enter a prefix to label output files: "))
     cat("\n")
-
-    readline(prompt = ("This step requires the Bioconductor package \"DESeq2\". Make sure it is installed, then press enter to continue..."))
     cat("Loading DESeq2 Library...\n")
     library("DESeq2")
     cat("Begin DESeq2 Normalization...\n")
