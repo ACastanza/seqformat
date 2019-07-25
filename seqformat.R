@@ -7,18 +7,12 @@ library("dplyr")
 cat("Loaded dplyr for data structuring\n")
 cat("\n")
 
-if (exists("altnorm") == FALSE) {
-  altnorm <- FALSE
-}
-## before running script set altnorm <- 'userlog' or 'usevst' or 'useall' to
-## output additional normalize using deseq2's rlog or vst functions
-
 iscounts <- FALSE
 txlevel <- FALSE
 FAIL <- FALSE
 isnormalized <- FALSE
 TYPE <- NULL
-txtype <- 0
+txtype <- "FALSE"
 is_directory <- FALSE
 getgeofiles <- FALSE
 seondaryfactor <- FALSE
@@ -26,10 +20,13 @@ NORM <- FALSE
 
 # Get Input Files and Prompt User for Necessary Information Set Working Directory
 
-path <- readline(prompt = ("Drop a directory into R window to use as the output folder or enter directory path: "))
+changewd <- askYesNo("Would you like to set a working directory for this session?")
+if(changewd == TRUE){
+  path <- readline(prompt = ("Drop a directory into R window to use as the output folder or enter directory path: "))
+
 setwd(path)
 cat("Done\n")
-cat("\n")
+cat("\n")}
 
 getgeofiles <- askYesNo("Attempt to get data directly from GEO \"supplementary files\"? ")
 if (getgeofiles == TRUE) {
@@ -151,9 +148,10 @@ if (iscounts == FALSE) {
         {
           dir <- dirname(genematrix)
         }  #GEO
-      txtype <- 4
+
+      txtype <- "RSEM"
       txlevel <- TRUE
-      TYPE <- "RSEM"
+      TYPE <- txtype
       NORM <- FALSE
       readline(prompt = ("This step requires the Bioconductor package \"tximport\". Make sure it is installed, then press enter to continue..."))
       library("tximport")
@@ -278,15 +276,17 @@ if (istx == TRUE) {
   }
   cat("\n")
   message("How were your transcripts quantified? tximport supports the following methods:\n")
-  cat("[1] Salmon\n")
-  cat("[2] Sailfish\n")
-  cat("[3] Kallisto\n")
-  cat("[4] RSEM\n")
-  # cat('[5] Stringtie\n') cat('[6] Generic Transcript Level Quantification
-  # Table\n') cat('WARNING: ONLY SALMON [1], Sailfish [2], and KALLISTO [3] ARE
-  # CURRENTLY SUPPORTED\n')
-  cat("\n")
-  txtype <- readline(prompt = ("Select your platform by entering the corresponding >>NUMBER<< (without brackets): "))
+
+  # cat("[1] Salmon\n")
+  # cat("[2] Sailfish\n")
+  # cat("[3] Kallisto\n")
+  # cat("[4] RSEM\n")
+  # # cat('[5] Stringtie\n') cat('[6] Generic Transcript Level Quantification
+  # # Table\n')
+  # cat("\n")
+  # txtype <- readline(prompt = ("Select your platform by entering the corresponding >>NUMBER<< (without brackets): "))
+  txtype <- select.list(c("Salmon","Sailfish", "Kallisto", "RSEM","Unknown"))
+
   cat("\n")
   if (getgeofiles == TRUE)
     {
@@ -296,7 +296,9 @@ if (istx == TRUE) {
         dir <- dirname(genematrix)
       }
     }  #GEO
-  if (txtype == 1) {
+
+  if (txtype == "Salmon") {
+
     if (getgeofiles == FALSE) {
       dir <- readline(prompt = ("Drop a directory containing Salmon output into R Window or Enter Directory Path: "))
     }
@@ -308,9 +310,9 @@ if (istx == TRUE) {
         ignoreAfterBar = TRUE)
       tximportcounts <- as.data.frame(txi.salmon$counts)
     } else if (length(files) == 0) {
-      txtype <- 6
+      txtype <- "Unknown"
     }
-  } else if (txtype == 2) {
+  } else if (txtype == "Sailfish") {
     if (getgeofiles == FALSE) {
       dir <- readline(prompt = ("Drop a directory containing Sailfish output into R Window or Enter Directory Path: "))
     }
@@ -322,9 +324,9 @@ if (istx == TRUE) {
         ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
       tximportcounts <- as.data.frame(txi.sailfish$counts)
     } else if (length(files) == 0) {
-      txtype <- 6
+      txtype <- "Unknown"
     }
-  } else if (txtype == 3) {
+  } else if (txtype == "Kallisto") {
     cat("Import Kallisto abundances from \"abundance.h5\" (requires rhdf5 library), or \"abundance.tsv*\".\n")
     kallistotype <- readline(prompt = ("Select kallisto datatype by entering \"h5\" or \"tsv\" (without quotes): "))
     if (kallistotype == "h5") {
@@ -341,7 +343,7 @@ if (istx == TRUE) {
           ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
         tximportcounts <- as.data.frame(txi.kallisto.h5$abundance)
       } else if (length(files) == 0) {
-        txtype <- 6
+        txtype <- "Unknown"
       }
     }
     if (kallistotype == "tsv") {
@@ -356,10 +358,10 @@ if (istx == TRUE) {
           ignoreTxVersion = TRUE, ignoreAfterBar = TRUE)
         tximportcounts <- as.data.frame(txi.kallisto.tsv$abundance)
       } else if (length(files) == 0) {
-        txtype <- 6
+        txtype <- "Unknown"
       }
     }
-  } else if (txtype == 5) {
+  } else if (txtype == "Stringtie") {
     cat("Stringtie suppot not yet implemented\n")
     # cat('We can import files produced by running the \'stringtie -eB -G
     # transcripts.gff <source_file.bam>\' command per the TXImport tutorial.\n')
@@ -374,7 +376,7 @@ if (istx == TRUE) {
     # tximport(tmp, type = 'stringtie', tx2gene = tx2gene)
     FAIL <- TRUE
   }
-  if (txtype == 6) {
+  if (txtype == "Unknown") {
     cat("Failover Mode. This method isn't really supported. Use at your own risk.\n")
     cat("Could not detect transcript quantifications with tximport.\n")
     cat(" We're going to have to make a lot of guesses here, but we'll get through this together.\n")
@@ -606,8 +608,8 @@ if (istx == TRUE) {
 }
 
 
-if (txtype == 4) {
-  TYPE <- "RSEM"
+if (txtype == "RSEM") {
+  TYPE <- txtype
   if (getgeofiles == FALSE) {
     dir <- readline(prompt = ("Drop a directory containing RSEM output into R Window or Enter Directory Path: "))
   }
@@ -911,7 +913,7 @@ if (txlevel == FALSE) {
 
 } else if (txlevel == TRUE) {
   full <- tximportcounts
-  if (txtype != 6) {
+  if (txtype != "Unknown") {
     cat("Using TXImport result...\n")
   }
   coldata <- as.data.frame(colnames(full), stringsAsFactors = FALSE, header = FALSE)
@@ -927,9 +929,9 @@ if (txlevel == FALSE) {
 if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
   cat("There are", paste(length(colnames(full))), "columns in your data table.\n")
   samplesize <- readline(prompt = ("How many of these are sequenced SAMPLES? "))
-  geneids <- (length(colnames(full)) - as.numeric(samplesize))
+  expids <- (length(colnames(full)) - as.numeric(samplesize))
   repeat {
-    if (geneids == "1") {
+    if (expids == "1") {
       # Prompt User for Original Experiment Namespace to Merge with CHIP On
       message("Gene Expression File Header:\n")
       cat("\n")
@@ -968,7 +970,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       coldata <- as.data.frame(colnames(full2), stringsAsFactors = FALSE, header = TRUE)
       colnames(coldata) <- c("EXPERIMENT")
       break
-    } else if (geneids > "1") {
+    } else if (expids > "1") {
       fullloop <- full
       # Prompt User for Original Experiment Namespace to Merge with CHIP On
       cat("Gene Expression File Header:\n")
@@ -989,7 +991,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
         expids <- coldata[expidnumber, ]
       }
       coldataloop <- coldata
-      for (i in 1:(as.numeric(geneids) - 1)) {
+      for (i in 1:(as.numeric(expids) - 1)) {
         do
         expidsdrop <- readline(prompt = ("Enter the name from the EXPERIMENT column or row number above that defines gene identifiers you want to DISCARD: "))
         expiddropnumber <- match(expidsdrop, cbind(rownames(coldataloop),
@@ -1179,8 +1181,7 @@ if (NORM == FALSE) {
     cat("Perofrming standard filtering of low count genes without additional normalization.\n")
     cat("You probably don't want to do this. We don't think this dataset is properly normalized.\n")
     NORM <- TRUE
-  }
-  if (donormalize == TRUE) {
+  } else if (donormalize == TRUE) {
 
     # SUM Counts for Identifiers Mapping to the Same Gene
     if (expids != 0) {
@@ -1225,20 +1226,7 @@ if (DESEQ2DONE == TRUE) {
   dds <- estimateSizeFactors(dds)
   norm <- counts(dds, normalized = TRUE)
   norm <- tibble::rownames_to_column(as.data.frame(norm), "NAME")
-}
-
-if (altnorm == "usevst" | altnorm == "useall") {
-  cat("Normalizing using the DESeq2 variance stabilizing transformation\n")
-  vsd <- vst(dds, blind = FALSE)
-  vstnorm <- as.data.frame(assay(vsd))
-  vstnorm <- tibble::rownames_to_column(as.data.frame(vstnorm), "NAME")
-}
-
-if (altnorm == "userlog" | altnorm == "useall") {
-  cat("Normalizing using the DESeq2 rlog transformation\n")
-  rld <- rlog(dds, blind = FALSE)
-  rlognorm <- as.data.frame(assay(rld))
-  rlognorm <- tibble::rownames_to_column(as.data.frame(rlognorm), "NAME")
+  full2 <- norm
 }
 
 # Import CHIP File for Processing
@@ -1331,38 +1319,6 @@ if (NORM == TRUE) {
   cat("Writing final .GCT file for GSEA\n")
   write.table(bound, paste0(outprefix, "_Formatted.gct"), sep = "\t", quote = F,
     row.names = FALSE, col.names = FALSE, na = "")
-}
-
-if (altnorm == "usevst" | altnorm == "useall") {
-  cat("Writing Variance Stabilizing Transformation Normalizated GCT\n")
-  vstprotoGCT <- merge(x = fullchip, y = vstnorm, by.x = "NAME", by.y = 0,
-    all.y = TRUE)
-  vstbound <- rbind(colnames(vstprotoGCT), vstprotoGCT)
-  vstbound <- rbind(NA, vstbound)
-  vstbound <- rbind(NA, vstbound)
-  vstbound[1, 1] <- "#1.2"
-  vstnumberofsamples <- length(colnames(vstbound)) - 2
-  vstnumberofgenes <- length(vstbound$NAME) - 3
-  vstbound[2, 1] <- vstnumberofgenes
-  vstbound[2, 2] <- vstnumberofsamples
-  write.table(vstbound, paste0(outprefix, "_vst_normalized_Counts.gct"), sep = "\t",
-    quote = F, row.names = FALSE, col.names = FALSE, na = "")
-}
-
-if (altnorm == "userlog" | altnorm == "useall") {
-  cat("Writing RLOG Normalizated GCT\n")
-  rlogprotoGCT <- merge(x = fullchip, y = rlognorm, by.x = "NAME", by.y = 0,
-    all.y = TRUE)
-  rlogbound <- rbind(colnames(rlogprotoGCT), rlogprotoGCT)
-  rlogbound <- rbind(NA, rlogbound)
-  rlogbound <- rbind(NA, rlogbound)
-  rlogbound[1, 1] <- "#1.2"
-  rlognumberofsamples <- length(colnames(rlogbound)) - 2
-  rlognumberofgenes <- length(rlogbound$NAME) - 3
-  rlogbound[2, 1] <- rlognumberofgenes
-  rlogbound[2, 2] <- rlognumberofsamples
-  write.table(rlogbound, paste0(outprefix, "_rlog_normalized_Counts.gct"), sep = "\t",
-    quote = F, row.names = FALSE, col.names = FALSE, na = "")
 }
 
 uniqueclsclasses <- unique(coldata$condition)
