@@ -10,8 +10,8 @@ cat("\n")
 if (exists("altnorm") == FALSE) {
   altnorm <- FALSE
 }
-## before running script set altnorm <- 'userlog' or 'usevst' or 'useall' to
-## output additional normalize using deseq2's rlog or vst functions
+## before running script set altnorm <- "userlog" or "usevst" or "useall" to
+## output additional alternate normalized GCTs using deseq2's rlog or vst functions
 
 iscounts <- FALSE
 txlevel <- FALSE
@@ -928,9 +928,9 @@ if (txlevel == FALSE) {
 if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
   cat("There are", paste(length(colnames(full))), "columns in your data table.\n")
   samplesize <- readline(prompt = ("How many of these are sequenced SAMPLES? "))
-  geneids <- (length(colnames(full)) - as.numeric(samplesize))
+  expids <- (length(colnames(full)) - as.numeric(samplesize))
   repeat {
-    if (geneids == "1") {
+    if (expids == "1") {
       # Prompt User for Original Experiment Namespace to Merge with CHIP On
       message("Gene Expression File Header:\n")
       cat("\n")
@@ -969,7 +969,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       coldata <- as.data.frame(colnames(full2), stringsAsFactors = FALSE, header = TRUE)
       colnames(coldata) <- c("EXPERIMENT")
       break
-    } else if (geneids > "1") {
+    } else if (expids > "1") {
       fullloop <- full
       # Prompt User for Original Experiment Namespace to Merge with CHIP On
       cat("Gene Expression File Header:\n")
@@ -990,7 +990,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
         expids <- coldata[expidnumber, ]
       }
       coldataloop <- coldata
-      for (i in 1:(as.numeric(geneids) - 1)) {
+      for (i in 1:(as.numeric(expids) - 1)) {
         do
         expidsdrop <- readline(prompt = ("Enter the name from the EXPERIMENT column or row number above that defines gene identifiers you want to DISCARD: "))
         expiddropnumber <- match(expidsdrop, cbind(rownames(coldataloop),
@@ -1180,8 +1180,7 @@ if (NORM == FALSE) {
     cat("Perofrming standard filtering of low count genes without additional normalization.\n")
     cat("You probably don't want to do this. We don't think this dataset is properly normalized.\n")
     NORM <- TRUE
-  }
-  if (donormalize == TRUE) {
+  } else if (donormalize == TRUE) {
 
     # SUM Counts for Identifiers Mapping to the Same Gene
     if (expids != 0) {
@@ -1226,20 +1225,7 @@ if (DESEQ2DONE == TRUE) {
   dds <- estimateSizeFactors(dds)
   norm <- counts(dds, normalized = TRUE)
   norm <- tibble::rownames_to_column(as.data.frame(norm), "NAME")
-}
-
-if (altnorm == "usevst" | altnorm == "useall") {
-  cat("Normalizing using the DESeq2 variance stabilizing transformation\n")
-  vsd <- vst(dds, blind = FALSE)
-  vstnorm <- as.data.frame(assay(vsd))
-  vstnorm <- tibble::rownames_to_column(as.data.frame(vstnorm), "NAME")
-}
-
-if (altnorm == "userlog" | altnorm == "useall") {
-  cat("Normalizing using the DESeq2 rlog transformation\n")
-  rld <- rlog(dds, blind = FALSE)
-  rlognorm <- as.data.frame(assay(rld))
-  rlognorm <- tibble::rownames_to_column(as.data.frame(rlognorm), "NAME")
+  full2 <- norm
 }
 
 # Import CHIP File for Processing
