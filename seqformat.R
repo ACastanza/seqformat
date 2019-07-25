@@ -7,6 +7,12 @@ library("dplyr")
 cat("Loaded dplyr for data structuring\n")
 cat("\n")
 
+if (exists("altnorm") == FALSE) {
+  altnorm <- FALSE
+}
+## before running script set altnorm <- "userlog" or "usevst" or "useall" to
+## output additional alternate normalized GCTs using deseq2's rlog or vst functions
+
 iscounts <- FALSE
 txlevel <- FALSE
 FAIL <- FALSE
@@ -19,11 +25,9 @@ seondaryfactor <- FALSE
 NORM <- FALSE
 
 # Get Input Files and Prompt User for Necessary Information Set Working Directory
-
 changewd <- askYesNo("Would you like to set a working directory for this session?")
 if(changewd == TRUE){
   path <- readline(prompt = ("Drop a directory into R window to use as the output folder or enter directory path: "))
-
 setwd(path)
 cat("Done\n")
 cat("\n")}
@@ -148,7 +152,6 @@ if (iscounts == FALSE) {
         {
           dir <- dirname(genematrix)
         }  #GEO
-
       txtype <- "RSEM"
       txlevel <- TRUE
       TYPE <- txtype
@@ -276,7 +279,6 @@ if (istx == TRUE) {
   }
   cat("\n")
   message("How were your transcripts quantified? tximport supports the following methods:\n")
-
   # cat("[1] Salmon\n")
   # cat("[2] Sailfish\n")
   # cat("[3] Kallisto\n")
@@ -286,7 +288,6 @@ if (istx == TRUE) {
   # cat("\n")
   # txtype <- readline(prompt = ("Select your platform by entering the corresponding >>NUMBER<< (without brackets): "))
   txtype <- select.list(c("Salmon","Sailfish", "Kallisto", "RSEM","Unknown"))
-
   cat("\n")
   if (getgeofiles == TRUE)
     {
@@ -296,9 +297,7 @@ if (istx == TRUE) {
         dir <- dirname(genematrix)
       }
     }  #GEO
-
   if (txtype == "Salmon") {
-
     if (getgeofiles == FALSE) {
       dir <- readline(prompt = ("Drop a directory containing Salmon output into R Window or Enter Directory Path: "))
     }
@@ -603,7 +602,7 @@ if (istx == TRUE) {
     full <- full[, -1]
     full <- distinct(full)
     full <- full %>% group_by(GENEID) %>% summarise_all(sum) %>% data.frame()
-
+    expids <- "GENEID"
   }
 }
 
@@ -821,8 +820,8 @@ if (txlevel == FALSE) {
     expids <- readline(prompt = ("Enter the name from the EXPERIMENT column or row number above that defines your gene identifiers: "))
     expidnumber <- match(expids, cbind(rownames(importdata), importdata)[, 1])
     if (is.na(expidnumber) == TRUE) {
-      expidnumber <- match(expids, cbind(rownames(importdata), importdata)[,
-        2])
+      expidnumber <- match(expids, cbind(rownames(importdata), importdata)[,2])
+      expids <- expidnumber
     }
     mergedexp <- Reduce(function(x, y) merge(x, y, all = FALSE, by = expidnumber,
       all.x = TRUE, all.y = TRUE), import.list, accumulate = F)
@@ -919,7 +918,6 @@ if (txlevel == FALSE) {
   coldata <- as.data.frame(colnames(full), stringsAsFactors = FALSE, header = FALSE)
   coldata <- rbind(c("GENEID"), coldata)
   colnames(coldata) <- c("EXPERIMENT")
-  expids <- 0
   full2 <- full
   cat("\n")
   print(head(full2, 3))
@@ -1229,6 +1227,21 @@ if (DESEQ2DONE == TRUE) {
   full2 <- norm
 }
 
+if (altnorm == "usevst" | altnorm == "useall") {
+  cat("Normalizing using the DESeq2 variance stabilizing transformation\n")
+  vsd <- vst(dds, blind = FALSE)
+  vstnorm <- as.data.frame(assay(vsd))
+  vstnorm <- tibble::rownames_to_column(as.data.frame(vstnorm), "NAME")
+}
+
+if (altnorm == "userlog" | altnorm == "useall") {
+  cat("Normalizing using the DESeq2 rlog transformation\n")
+  rld <- rlog(dds, blind = FALSE)
+  rlognorm <- as.data.frame(assay(rld))
+  rlognorm <- tibble::rownames_to_column(as.data.frame(rlognorm), "NAME")
+}
+
+
 # Import CHIP File for Processing
 message("We now need to convert your gene identifiers into the MSigDB namespace using GSEA CHIP files.\n")
 message("If your experiment uses >> HUMAN ENSEMBL IDs << we can do this automatically\n")
@@ -1268,21 +1281,20 @@ cat("Done\n")
 cat("\n")
 
 # Merge Gene Expression Matrix with CHIP File and Process Identifiers
+if(altnorm == FALSE){
 mappedexp <- merge(x = chip, y = full2, by.x = "Raw_IDs", by.y = expids, all = FALSE)
 size <- length(colnames(mappedexp))
 mappedexp <- mappedexp[c(2:size)]
-
 cat("Summing Counts that mapped to the same gene after applying mapping chip\n")
-
 # SUM Counts for Identifiers Mapping to the Same Gene
 mappedexp <- distinct(mappedexp)
 mappedexp_sum <- mappedexp %>% group_by(NAME) %>% summarise_all(sum) %>% data.frame()
-
 # Set Gene Names as Index Column
 mappedexp_sum2 <- mappedexp_sum[, -1]
 rownames(mappedexp_sum2) <- mappedexp_sum[, 1]
 rownames(coldata) <- colnames(mappedexp_sum2)
-cat("Done\n")
+cat("Done\n")}
+
 outprefix <- readline(prompt = ("Enter a prefix to label output files: "))
 cat("\n")
 
@@ -1319,6 +1331,64 @@ if (NORM == TRUE) {
   cat("Writing final .GCT file for GSEA\n")
   write.table(bound, paste0(outprefix, "_Formatted.gct"), sep = "\t", quote = F,
     row.names = FALSE, col.names = FALSE, na = "")
+}
+
+if (altnorm == "usevst" | altnorm == "useall") {
+fullvst <- vstnorm
+mappedexp <- merge(x = chip, y = fullvst, by.x = "Raw_IDs", by.y = expids, all = FALSE)
+size <- length(colnames(mappedexp))
+mappedexp <- mappedexp[c(2:size)]
+cat("Summing Counts that mapped to the same gene after applying mapping chip\n")
+# SUM Counts for Identifiers Mapping to the Same Gene
+mappedexp <- distinct(mappedexp)
+mappedexp_sum <- mappedexp %>% group_by(NAME) %>% summarise_all(sum) %>% data.frame()
+# Set Gene Names as Index Column
+mappedexp_sum2 <- mappedexp_sum[, -1]
+rownames(mappedexp_sum2) <- mappedexp_sum[, 1]
+rownames(coldata) <- colnames(mappedexp_sum2)
+cat("Done\n")
+  cat("Writing Variance Stabilizing Transformation Normalizated GCT\n")
+  vstprotoGCT <- merge(x = fullchip, y = vstnorm, by.x = "NAME", by.y = 0,
+    all.y = TRUE)
+  vstbound <- rbind(colnames(vstprotoGCT), vstprotoGCT)
+  vstbound <- rbind(NA, vstbound)
+  vstbound <- rbind(NA, vstbound)
+  vstbound[1, 1] <- "#1.2"
+  vstnumberofsamples <- length(colnames(vstbound)) - 2
+  vstnumberofgenes <- length(vstbound$NAME) - 3
+  vstbound[2, 1] <- vstnumberofgenes
+  vstbound[2, 2] <- vstnumberofsamples
+  write.table(vstbound, paste0(outprefix, "_vst_normalized_Counts.gct"), sep = "\t",
+    quote = F, row.names = FALSE, col.names = FALSE, na = "")
+}
+
+if (altnorm == "userlog" | altnorm == "useall") {
+fullrlog <- rlognorm
+mappedexp <- merge(x = chip, y = fullrlog, by.x = "Raw_IDs", by.y = expids, all = FALSE)
+size <- length(colnames(mappedexp))
+mappedexp <- mappedexp[c(2:size)]
+cat("Summing Counts that mapped to the same gene after applying mapping chip\n")
+# SUM Counts for Identifiers Mapping to the Same Gene
+mappedexp <- distinct(mappedexp)
+mappedexp_sum <- mappedexp %>% group_by(NAME) %>% summarise_all(sum) %>% data.frame()
+# Set Gene Names as Index Column
+mappedexp_sum2 <- mappedexp_sum[, -1]
+rownames(mappedexp_sum2) <- mappedexp_sum[, 1]
+rownames(coldata) <- colnames(mappedexp_sum2)
+cat("Done\n")
+  cat("Writing RLOG Normalizated GCT\n")
+  rlogprotoGCT <- merge(x = fullchip, y = rlognorm, by.x = "NAME", by.y = 0,
+    all.y = TRUE)
+  rlogbound <- rbind(colnames(rlogprotoGCT), rlogprotoGCT)
+  rlogbound <- rbind(NA, rlogbound)
+  rlogbound <- rbind(NA, rlogbound)
+  rlogbound[1, 1] <- "#1.2"
+  rlognumberofsamples <- length(colnames(rlogbound)) - 2
+  rlognumberofgenes <- length(rlogbound$NAME) - 3
+  rlogbound[2, 1] <- rlognumberofgenes
+  rlogbound[2, 2] <- rlognumberofsamples
+  write.table(rlogbound, paste0(outprefix, "_rlog_normalized_Counts.gct"), sep = "\t",
+    quote = F, row.names = FALSE, col.names = FALSE, na = "")
 }
 
 uniqueclsclasses <- unique(coldata$condition)
