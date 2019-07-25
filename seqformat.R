@@ -948,6 +948,8 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
           expids <- "GENEID"
         }
         if (all((grepl("|", full[, expids], fixed = TRUE))) == TRUE){
+          readline(prompt = ("This step requires the CRAN package \"tidyr\". Make sure it is installed, then press enter to continue..."))
+          library("tidyr")
           splitids <- as.data.frame(full[,expids])
           splitnames <- separate(split, 1, c("ID_1", "ID_2"), sep = "\\|", remove = TRUE, extra = "warn", fixed=TRUE)
           keepid <- menu(c("ID_1","ID_2"), title="Which ID do you want to keep?")
