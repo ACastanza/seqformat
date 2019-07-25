@@ -942,6 +942,8 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
           splitids <- as.data.frame(full[,expids])
           splitnames <- separate(splitids, 1, c("ID_1", "ID_2"), sep = "_", remove = TRUE, extra = "warn", fixed=TRUE)
           head(splitnames)
+          print(head(splitnames,3))
+          cat("\n")
           keepid <- menu(c("ID_1","ID_2"), title="Which ID do you want to keep?")
           full[,expids] <- splitnames[,keepid]
           colnames(full)[expids] <- "GENEID"
@@ -952,6 +954,8 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
           library("tidyr")
           splitids <- as.data.frame(full[,expids])
           splitnames <- separate(splitids, 1, c("ID_1", "ID_2"), sep = "\\|", remove = TRUE, extra = "warn", fixed=TRUE)
+          print(head(splitnames,3))
+          cat("\n")
           keepid <- menu(c("ID_1","ID_2"), title="Which ID do you want to keep?")
           full[,expids] <- splitnames[,keepid]
           colnames(full)[expids] <- "GENEID"
