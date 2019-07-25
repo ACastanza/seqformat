@@ -7,12 +7,6 @@ library("dplyr")
 cat("Loaded dplyr for data structuring\n")
 cat("\n")
 
-if (exists("altnorm") == FALSE) {
-  altnorm <- FALSE
-}
-## before running script set altnorm <- "userlog" or "usevst" or "useall" to
-## output additional alternate normalized GCTs using deseq2's rlog or vst functions
-
 iscounts <- FALSE
 txlevel <- FALSE
 FAIL <- FALSE
@@ -25,9 +19,11 @@ seondaryfactor <- FALSE
 NORM <- FALSE
 
 # Get Input Files and Prompt User for Necessary Information Set Working Directory
+
 changewd <- askYesNo("Would you like to set a working directory for this session?")
 if(changewd == TRUE){
   path <- readline(prompt = ("Drop a directory into R window to use as the output folder or enter directory path: "))
+
 setwd(path)
 cat("Done\n")
 cat("\n")}
@@ -152,6 +148,7 @@ if (iscounts == FALSE) {
         {
           dir <- dirname(genematrix)
         }  #GEO
+
       txtype <- "RSEM"
       txlevel <- TRUE
       TYPE <- txtype
@@ -279,6 +276,7 @@ if (istx == TRUE) {
   }
   cat("\n")
   message("How were your transcripts quantified? tximport supports the following methods:\n")
+
   # cat("[1] Salmon\n")
   # cat("[2] Sailfish\n")
   # cat("[3] Kallisto\n")
@@ -288,6 +286,7 @@ if (istx == TRUE) {
   # cat("\n")
   # txtype <- readline(prompt = ("Select your platform by entering the corresponding >>NUMBER<< (without brackets): "))
   txtype <- select.list(c("Salmon","Sailfish", "Kallisto", "RSEM","Unknown"))
+
   cat("\n")
   if (getgeofiles == TRUE)
     {
@@ -297,7 +296,9 @@ if (istx == TRUE) {
         dir <- dirname(genematrix)
       }
     }  #GEO
+
   if (txtype == "Salmon") {
+
     if (getgeofiles == FALSE) {
       dir <- readline(prompt = ("Drop a directory containing Salmon output into R Window or Enter Directory Path: "))
     }
