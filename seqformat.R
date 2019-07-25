@@ -602,8 +602,7 @@ if (istx == TRUE) {
     full <- full[, -1]
     full <- distinct(full)
     full <- full %>% group_by(GENEID) %>% summarise_all(sum) %>% data.frame()
-    expids <- NULL
-    expids <- 1
+    expids <- "GENEID"
   }
 }
 
@@ -919,7 +918,6 @@ if (txlevel == FALSE) {
   coldata <- as.data.frame(colnames(full), stringsAsFactors = FALSE, header = FALSE)
   coldata <- rbind(c("GENEID"), coldata)
   colnames(coldata) <- c("EXPERIMENT")
-  expids <- 0
   full2 <- full
   cat("\n")
   print(head(full2, 3))
