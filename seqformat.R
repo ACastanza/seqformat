@@ -24,6 +24,8 @@ getgeofiles <- FALSE
 seondaryfactor <- FALSE
 NORM <- FALSE
 USEDRSEMTXLEVEL <- FALSE
+altspecies <- FALSE
+mapspecies <- FALSE
 
 # Get Input Files and Prompt User for Necessary Information Set Working Directory
 changewd <- askYesNo("Would you like to set a working directory for this session?")
@@ -1277,18 +1279,29 @@ if (buildchip == TRUE) {
   }
   altspecies <- askYesNo("The default species is HUMAN you want to override this default? ")
     if (altspecies == TRUE) {
-    warning("This method is not supported. We do not recommend doing this.")
-    datasets <- as.data.frame(listDatasets(useEnsembl(biomart="ensembl",version=ensemblversion)), header =T)
-    speciesnumber <- menu(datasets[,2], title="Select the species of the dataset you wish to process:")
-    species <- datasets[speciesnumber,1]
-    ensorthomart <- useEnsembl(biomart = "ensembl", dataset = species, version = paste0(ensemblversion))
-    orthology <- getBM(attributes = c("ensembl_gene_id", "hsapiens_homolog_ensembl_gene"), mart = ensorthomart)
+    warning("The following method is not supported. We do not recommend doing this.")
+    mapspecies <- askYesNo("Do you want to attempt automatic orthology conversion? ")
+      if(mapspecies == TRUE){
+      datasets <- as.data.frame(listDatasets(useEnsembl(biomart="ensembl",version=ensemblversion)), header =T)
+      speciesnumber <- menu(datasets[,2], title="Select the species of the dataset you wish to process:")
+      species <- datasets[speciesnumber,1]
+      ensorthomart <- useEnsembl(biomart = "ensembl", dataset = species, version = paste0(ensemblversion))
+      orthology <- getBM(attributes = c("ensembl_gene_id", "hsapiens_homolog_ensembl_gene"), mart = ensorthomart)
+      } else if (mapspecies == FALSE){
+        ensmart <- useEnsembl(biomart = "ensembl", dataset = species, version = paste0(ensemblversion))
+        cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
+        rawchip <- getBM(attributes = c("ensembl_gene_id", "external_gene_name", "description"), mart = ensmart)
+        colnames(rawchip) <- c("Probe.Set.ID", "Gene.Symbol", "Gene.Title")
+        rawchip <- distinct(rawchip)
+        }
     }
+if (altspecies == FALSE | mapspecies == TRUE){
   ensmart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", version = paste0(ensemblversion))
   cat("Building ENSEMBL Gene ID -> Gene Symbol Mappings..\n")
   rawchip <- getBM(attributes = c("ensembl_gene_id", "external_gene_name", "description"), mart = ensmart)
   colnames(rawchip) <- c("Probe.Set.ID", "Gene.Symbol", "Gene.Title")
   rawchip <- distinct(rawchip)
+}
 }
 
 if (buildchip == FALSE) {
@@ -1304,14 +1317,14 @@ colnames(fullchip) <- c("NAME", "Description")
 cat("Done\n")
 cat("\n")
 
-if (altspecies == TRUE){
+if (altspecies == TRUE & mapspecies == TRUE){
 orthoexp <- merge(x = orthology, y = full2, by.x = 1, by.y = expids, all = FALSE)
 orthoexp_2 <- orthoexp[,2:length(colnames(orthoexp))]
 orthoexp_3 <- orthoexp_2[orthoexp_2[,1] != "",]
 colnames(orthoexp_3)[1] <- expids
 cat("Summing orthologues as components of pseudo-metagenes...\n")
 cat("This is almost certianly a bad way of doing this...\n")
-message("We did warn you not to do this...")
+message("We did warn you not to come here...")
 orthoexp_max <- orthoexp_3 %>% group_by(.dots = expids) %>% summarise_all(sum) %>% data.frame()
 full2 <- orthoexp_max
 }
