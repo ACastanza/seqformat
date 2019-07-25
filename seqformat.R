@@ -821,8 +821,8 @@ if (txlevel == FALSE) {
     expids <- readline(prompt = ("Enter the name from the EXPERIMENT column or row number above that defines your gene identifiers: "))
     expidnumber <- match(expids, cbind(rownames(importdata), importdata)[, 1])
     if (is.na(expidnumber) == TRUE) {
-      expidnumber <- match(expids, cbind(rownames(importdata), importdata)[,
-        2])
+      expidnumber <- match(expids, cbind(rownames(importdata), importdata)[,2])
+      expids <- expidnumber
     }
     mergedexp <- Reduce(function(x, y) merge(x, y, all = FALSE, by = expidnumber,
       all.x = TRUE, all.y = TRUE), import.list, accumulate = F)
