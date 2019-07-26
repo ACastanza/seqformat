@@ -1266,7 +1266,7 @@ if (altnorm == "userlog" | altnorm == "useall") {
 
 # Import CHIP File for Processing
 message("We now need to convert your gene identifiers into the MSigDB namespace using GSEA CHIP files.\n")
-buildchip <- askYesNo("Do you want to build the CHIP automatically from BiomaRt? (not recommended if MSigDB CHIP is available) ")
+buildchip <- askYesNo("Do you want to build the CHIP automatically from BiomaRt (available only for ENSEMBL Gene IDs)? (not recommended if MSigDB CHIP is available) ")
 if (buildchip == TRUE) {
   readline(prompt = ("This requires the Bioconductor package \"biomaRt\". Make sure it is installed, then press enter to continue..."))
   library("biomaRt")
