@@ -940,7 +940,7 @@ if ((txlevel == FALSE | TYPE == "RSEM") == (is_directory == FALSE)) {
       }
       # FIX ENSG_SYMBOL MERGE
       if (txlevel == FALSE) {
-        if (all((grepl("_", full[, expids], fixed = TRUE))) == TRUE) {
+        if (all((grepl("_", full[, expids], fixed = TRUE))) == TRUE & length(grepl("NM_", full[, expids], fixed = TRUE)[grepl("NM_", full[, expids], fixed = TRUE)==TRUE])<1000) {
           readline(prompt = ("This step requires the CRAN package \"tidyr\". Make sure it is installed, then press enter to continue..."))
           library("tidyr")
           splitids <- as.data.frame(full[,expids])
